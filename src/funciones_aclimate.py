@@ -10,9 +10,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-ruta_daily_data = "/content/drive/MyDrive/ANGOLA/inputs/prediccionClimatica/dailyData"
-ruta_probabilidades = "/content/drive/MyDrive/ANGOLA/outputs/probForecast/probabilities.csv"
-ruta_salidas = "/content/drive/MyDrive/ANGOLA/save"
+#ruta_daily_data = "/content/drive/MyDrive/ANGOLA/inputs/prediccionClimatica/dailyData"
+#ruta_probabilidades = "/content/drive/MyDrive/ANGOLA/outputs/probForecast/probabilities.csv"
+#ruta_salidas = "/content/drive/MyDrive/ANGOLA/save"
 
 def preprocessing(prob_root,  output_root, forecast_period):
 
