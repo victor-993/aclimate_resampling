@@ -62,7 +62,7 @@ def preprocessing(prob_root,  output_root, forecast_period):
 
     # Merge the prob DataFrame with the period DataFrame based on the 'month' and 'Central_month' columns
     prob = prob.merge(period, left_on='month', right_on='Central_month')
-
+    prob.drop(['month','Central_month'], axis = 1, inplace = True )
 
   else:
     if forecast_period == "bi":
@@ -89,9 +89,7 @@ def preprocessing(prob_root,  output_root, forecast_period):
       # Merge the prob DataFrame with the period DataFrame based on the 'month' and 'End' month columns
       # Join with prob_a
       prob = prob_a.append(prob.merge(period, left_on='month', right_on='End'))
-
-  # Drop the 'month' column from the 'prob' DataFrame
-  prob.drop(['month'], axis = 1, inplace = True )
+      prob.drop(['month'], axis = 1, inplace = True )
 
   # Reshape the 'prob' DataFrame and put the 'below', 'normal' and 'above' probability categories in a column
   prob = prob.melt(id_vars = ['year', 'id', 'Season', 'Start','End'], var_name = 'Type', value_name = 'Prob')
@@ -369,8 +367,6 @@ def save_forecast(output_root, year_forecast, forecast_period, prob, seasons_ran
   
    Returns:
         None
-
-
   """
 
   # Set the output root based on forecast period
