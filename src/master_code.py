@@ -4,12 +4,11 @@
 # Created by: Maria Victoria Diaz
 # Alliance Bioversity, CIAT. 2023
 
+from funciones_aclimate import *
 
 
+def resampling_master(station, input_root, climate_data_root, output_root, year_forecast, forecast_period = 3):
 
-def resampling_master (station, input_root, climate_data_root, output_root, year_forecast, forecast_period = 3):
-
-    import funciones_aclimate
     import pandas as pd
     import calendar
     import numpy as np
