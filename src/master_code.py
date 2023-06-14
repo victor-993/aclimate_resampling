@@ -9,9 +9,7 @@
 
 def resampling_master (station, input_root, climate_data_root, output_root, year_forecast, forecast_period = 3):
 
-    import processing
-    import forecast_station
-    import save_forecast
+    import funciones_aclimate
     import pandas as pd
     import calendar
     import numpy as np
