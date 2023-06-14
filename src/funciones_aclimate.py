@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
+# Functions to do climate daily data forecast per station
+# Created by: Maria Victoria Diaz
+# Alliance Bioversity, CIAT. 2023
 
-import pandas as pd
-import calendar
-import numpy as np
-import random
-import os
-import warnings
-warnings.filterwarnings("ignore")
 
 
 def preprocessing(prob_root,  output_root, forecast_period):
@@ -391,6 +387,8 @@ def save_forecast(output_root, year_forecast, forecast_period, prob, seasons_ran
       escenarios.append(df)
       df.to_csv(output_estacion +"_escenario_"+ str(i)+".csv", index=False)
 
+  print("Escenaries saved in {}".format{output_estacion})
+
   if os.path.exists(output_estacion+ "/summary/"):
       summary_path = output_estacion+ "/summary/"
   else:
@@ -401,4 +399,5 @@ def save_forecast(output_root, year_forecast, forecast_period, prob, seasons_ran
   df = pd.concat(escenarios)
   df.groupby(['day', 'month']).max().reset_index().sort_values(['month', 'day'], ascending = True).to_csv(summary_path+ station+"_max.csv", index=False)
   df.groupby(['day', 'month']).min().reset_index().sort_values(['month', 'day'], ascending = True).to_csv(summary_path+ station+"_min.csv", index=False)
+  print("Minimum and Maximum of escenaries saved in {}".format{summary_path})
 
