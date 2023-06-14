@@ -91,8 +91,8 @@ def preprocessing(prob_root,  output_root, forecast_period):
   prob = prob.melt(id_vars = ['year', 'id', 'Season', 'Start','End'], var_name = 'Type', value_name = 'Prob')
   
   # Write DataFrame with seasons names and their months, and probability DataFrame
-  period.to_csv(output_root+'/seasons.csv', index = False)
-  prob.to_csv(output_root+'/cpt_probabilities.csv', index = False)
+  #period.to_csv(output_root+'/seasons.csv', index = False)
+  #prob.to_csv(output_root+'/cpt_probabilities.csv', index = False)
 
   #Return probability DataFrame
   return prob
@@ -302,27 +302,29 @@ def forecast_station(station, prob, daily_data_root, output_root, year_forecast,
   if os.path.exists(output_root + "/"+station):
        output_estacion = output_root + "/"+station
   else:
-       output_estacion = os.mkdir(output_root +"/"+ station)
-       output_estacion = str(output_estacion)
+       os.mkdir(output_root +"/"+ station)
+       output_estacion = output_root +"/"+ station
 
  
   if forecast_period == 'bi':
      if os.path.exists(output_estacion+'/bi/'):
           output_estacion = output_estacion+'/bi/'
      else:
-          output_estacion = os.mkdir(output_estacion+'/bi/')
+         os.mkdir(output_estacion+'/bi/')
+         output_estacion = output_estacion+'/bi/'
+
   else:
      if os.path.exists(output_estacion+'/tri/'):
         output_estacion = output_estacion+'/tri/'
      else:
-        output_estacion = os.mkdir(output_estacion+'/tri/')
-        output_estacion = str(output_estacion)
+       os.mkdir(output_estacion+'/tri/')
+       output_estacion = output_estacion+'/tri/'
 
 
   # Join seasons samples by column by sample id and save DataFrame in the folder created
   base_years = pd.concat(base_years, axis = 1).rename(columns={'index': 'id'})
   base_years = base_years.iloc[:,[0,1,3] ]
-  base_years.to_csv(output_estacion+ "/samples_for_forecast_"+ forecast_period +".csv", index = False)
+  #base_years.to_csv(output_estacion+ "/samples_for_forecast_"+ forecast_period +".csv", index = False)
   
   # Join climate data filtered for the seasons and save DataFrame in the folder created
   seasons_range = pd.concat(seasons_range).rename(columns={'index': 'id'})
@@ -392,8 +394,8 @@ def save_forecast(output_root, year_forecast, forecast_period, prob, seasons_ran
   if os.path.exists(output_estacion+ "/summary/"):
       summary_path = output_estacion+ "/summary/"
   else:
-      summary_path = os.mkdir(output_estacion+ "/summary/")
-      summary_path = str(summary_path)
+      os.mkdir(output_estacion+ "/summary/")
+      summary_path = output_estacion+ "/summary/"
 
   # Calculate maximum and minimum of escenaries by date and save
   df = pd.concat(escenarios)
