@@ -163,3 +163,12 @@ cython_debug/
 dailyData/
 probForecast/
 save/
+
+# Folder to test
+data/*/
+data/*.*
+!data/readme.md
+
+# Credenciales
+/cdsapirc
+/.cdsapirc

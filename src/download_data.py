@@ -3,48 +3,98 @@ import glob
 import datetime
 import json
 
-from datetime import datetime, timedelta
+import datetime
+from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
 
-import urllib.request
 import requests
 
 import pandas as pd
 import numpy as np
 
+import urllib.request
+from tqdm import tqdm
+
 import rasterio
 
 import pickle
 
+import cdsapi
+#import xarray as xr
+import pandas as pd
+
+
+class DownloadProgressBar(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
+
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 0. Function to download Chirp data
+# Function which creates a folder. It checks if the folders exist before
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# This function 
-# INPUT
-# ini.date start date to download.
-# end.date: end date to download.
-# year_to: resampling year. 
-# path_Chirp: path to save raster files. 
-# no_cores = # cores to use in parallel. 
+# (string) path: Path where the folder should be create
+def mkdir(path):
+    if not os.path.exists(path): 
+        os.mkdir(path)
 
-# OUTPUT: save chirp raster layers.
+def download_file(url, path, force = False):
+    if force and os.path.exists(path) == False:
+        with DownloadProgressBar(unit='B', unit_scale=True,miniters=1, desc=url.split('/')[-1]) as t:
+            urllib.request.urlretrieve(url, filename=path, reporthook=t.update_to)
+    else:
+        print("File already downloaded!",path)
 
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Function to download chirps data
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# save_path: path to save raster files.
+# start_date: start date to download.
+# end_date: end date to download.
+# year_to: resampling year.
+# cores: # cores to use in parallel.
+# force: If you want to force to execute the process
+# OUTPUT: save raster layers.
+def download_data_chirp(save_path, start_date, end_date, year_to, cores, force = False):
+    save_path_chirp = os.path.join(save_path,"chirps")
+    mkdir(save_path_chirp)
 
-# OUTPUT: save chirp raster layers.
-def download_data_chirp(ini_date, end_date, year_to, path_chirp, no_cores):
-    dates = [ini_date + timedelta(days=x) for x in range((end_date - ini_date).days + 1)]
-    dates_str = [date.strftime("%Y.%m.%d").replace(".", "-") for date in dates]
-    urls = [f"http://data.chc.ucsb.edu/products/CHIRP/daily/{year_to}/chirp.{date}.tif" for date in dates_str]
+    dates = [start_date + timedelta(days=x) for x in range((end_date - start_date).days + 1)]
+    urls = [f"http://data.chc.ucsb.edu/products/CHIRP/daily/{year_to}/chirp.{date.strftime('%Y.%m.%d')}.tif" for date in dates]
     files = [os.path.basename(url) for url in urls]
-    path_chirp_all = [os.path.join(path_chirp, file) for file in files]
+    save_path_chirp_all = [os.path.join(save_path_chirp, file) for file in files]
+    force_all = [force] * len(files)
 
-    def download_file(url, path):
-        urllib.request.urlretrieve(url, path)
+    with ThreadPoolExecutor(max_workers=cores) as executor:
+        executor.map(download_file, urls, save_path_chirp_all,force_all)
 
-    with ThreadPoolExecutor(max_workers=no_cores) as executor:
-        executor.map(download_file, urls, path_chirp_all)
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Function to download ERA 5 data
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# save_path: path to save raster files.
+# start_date: start date to download.
+# end_date: end date to download.
+# # region: North, West, South, East
+# variables: List of variables to download. by default
+# cores: # cores to use in parallel.
+# OUTPUT: save raster layers.
+def download_era5_data(save_path, start_date, end_date, region, variables=["2m_temperature"],):
+    save_path_era5 = os.path.join(save_path,"era5")
+    mkdir(save_path_era5)
+    save_path_era5 = os.path.join(save_path,"era.nc")
 
-    return "CHIRPS data downloaded!"
+    c = cdsapi.Client()
+
+    c.retrieve('reanalysis-era5-single-levels',
+        {
+            'product_type': 'reanalysis',
+            'format': 'netcdf',
+            'variable': variables,
+            'area': f'{region[0]}/{region[1]}/{region[2]}/{region[3]}',
+            'date': f'{start_date.strftime("%Y%m%d")}/{end_date.strftime("%Y%m%d")}',
+        },
+        save_path_era5
+    )
 
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -198,26 +248,36 @@ def write_scenarios(current_index=None):
         print(f"{current_index}-{min(current_index + 99, length_wth)} scenarios written")
 
 
-def run():
+def run(path_output,country, region, cores = 1, force = False):
     ## up 2021, jre: Se estandariza el uso de formato fecha, se requiere paquete lubridate
+    print("Calculating dates for the process")
+    start_date = (datetime.date.today() - pd.DateOffset(months=1)).replace(day=1)
+    end_date = (start_date + pd.DateOffset(months=1)) - pd.DateOffset(days=1)
+    year_to = start_date.year
+    month_to = start_date.month
+    print("Init:",start_date,"End:",end_date,"Year:",year_to,"Month:",month_to)
 
-    ini_date = (datetime.date.today() - pd.DateOffset(months=1)).replace(day=1)
-    end_date = (ini_date + pd.DateOffset(months=1)) - pd.DateOffset(days=1)
-    year_to = ini_date.year
-    month_to = ini_date.month
-    path_Chirp = path_output
-
-    # Set the number of cores for parallel processing
-    no_cores = int(os.getenv("N_CORES"))
+    # Creating folder
+    print("Creating the output folder for country")
+    path_country = os.path.join(path_output,country) 
+    mkdir(path_country)
 
     # Download Chirps data
-    download_data_chirp(ini_date, end_date, year_to, path_Chirp, no_cores)
+    print("CHIRPS data started!")
+    download_data_chirp(path_country, start_date, end_date, year_to, cores, force)
+    print("CHIRPS data downloaded!")
+
+    # Download ERA 5 data
+    print("ERA 5 data started!")
+    download_era5_data(path_country, start_date, end_date, region )
+    print("ERA 5 data downloaded!")
+    
 
     # Initialize wth_escenaries
     wth_escenaries = Resam.copy()
-    wth_escenaries['chirp_data'] = wth_escenaries['coord'].apply(lambda x: extract_chirp_safety(path_Chirp, x))
-    wth_escenaries['nasa_data'] = wth_escenaries.apply(lambda row: download_nasa_safety(ini_date, end_date, row['stations'], row['coord']), axis=1)
-    wth_escenaries['climatology_mean'] = wth_escenaries['stations'].apply(lambda x: clim_extract(x, ini_date))
+    wth_escenaries['chirp_data'] = wth_escenaries['coord'].apply(lambda x: extract_chirp_data(path_chirp, x))
+    wth_escenaries['nasa_data'] = wth_escenaries.apply(lambda row: download_nasa_safety(start_date, end_date, row['stations'], row['coord']), axis=1)
+    wth_escenaries['climatology_mean'] = wth_escenaries['stations'].apply(lambda x: clim_extract(x, start_date))
 
     # Perform join_wth_escenarios using parallel processing
     wth_escenaries['wth_final'] = wth_escenaries.apply(lambda row: join_wth_escenarios(row['Escenaries'], row['chirp_data'], row['nasa_data'], row['climatology_mean']), axis=1)
@@ -225,15 +285,21 @@ def run():
 
 
     # Save wth_escenaries as pickle file
-    with open(f"/forecast/workdir/{currentCountry}_wth_scenaries.pkl", "wb") as f:
+    with open(f"/forecast/workdir/{country}_wth_scenaries.pkl", "wb") as f:
         pickle.dump(wth_escenaries, f)
 
     write_scenarios()
         
     # Remove chirp files
-    files = glob.glob(os.path.join(path_output, "*.tif"))
-    for file in files:
-        os.remove(file)
+    #files = glob.glob(os.path.join(path_output, "*.tif"))
+    #for file in files:
+    #    os.remove(file)
 
 if __name__ == "__main__":
-    run()
+    print("Setting global parameters")
+    country = "ET"
+    path = "D:\\CIAT\\Code\\USAID\\aclimate_resampling\\data\\"
+    cores = 2
+    force = False
+    region = [14,32,3,48]
+    run(path,country, region,cores, force)
