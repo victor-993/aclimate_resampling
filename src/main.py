@@ -1,0 +1,16 @@
+import datetime
+
+import pandas as pd
+
+from download_data import DownloadData
+
+
+if __name__ == "__main__":
+    print("Setting global parameters")
+    start_date = (datetime.date.today() - pd.DateOffset(months=1)).replace(day=1)
+    country = "ETHIOPIA"
+    path = "D:\\CIAT\\Code\\USAID\\aclimate_resampling\\data\\"
+    region = [14,32,3,48]
+    cores = 2
+    dd = DownloadData(start_date,country,path,region,cores=cores)
+    dd.run()
