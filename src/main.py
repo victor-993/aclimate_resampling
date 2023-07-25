@@ -11,6 +11,7 @@ if __name__ == "__main__":
     country = "ETHIOPIA"
     #country = "TANZANIA"
     path = "D:\\CIAT\\Code\\USAID\\aclimate_resampling\\data\\"
+    #path = "C:\\temp\\test\\"
     region = [14,32,3,48] # North, West, South, East
     ##region = [0,28,-12,41] # North, West, South, East
     cores = 2

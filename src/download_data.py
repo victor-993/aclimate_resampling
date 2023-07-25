@@ -279,12 +279,13 @@ class DownloadData():
         cols_date = ['day','month','year']
         cols_total = cols_date + variables
         for index,location in tqdm(locations.iterrows(),desc="Writing scenarios"):
-            files = glob.glob(os.path.join(save_path, '*'))
+            files = glob.glob(os.path.join(save_path,location["ws"], '*'))
             for f in files:
+                #print(f)
                 # Preparing original files
                 df_tmp = pd.read_csv(f)
                 # Remove records old
-                df_tmp = df_tmp.loc[df_tmp["year"] != self.start_date.year & df_tmp["month"] != self.start_date.month,:]
+                df_tmp = df_tmp.loc[(df_tmp["year"] != self.start_date.year) & (df_tmp["month"] != self.start_date.month),:]
 
                 # filtering data for this location
                 df_data = data.loc[data["ws"] == location["ws"],cols_total]
@@ -294,8 +295,9 @@ class DownloadData():
                     df_data = climatology.loc[climatology["ws"] == location["ws"],cols_total]
 
                 #
-                df_data = df_data.append(df_tmp,ignore_index=True)
-                df_data.write_csv(f)
+                #df_data = df_data.append(df_tmp,ignore_index=True)
+                df_data = pd.concat([df_data,df_tmp], ignore_index=True)
+                df_data.to_csv(f,index=False)
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to runs all process
@@ -366,8 +368,6 @@ class DownloadData():
             print("Extracted ERA 5 data")
 
             print("Merging CHIRPS and ERA 5")
-            print(df_data_chirps.head())
-            print(df_data_era5.head())
             df_data = pd.merge(df_data_chirps,df_data_era5,how='outer',on=['ws','day','month','year'])
             print("Merged CHIRPS and ERA 5")
 
