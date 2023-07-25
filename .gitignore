@@ -120,6 +120,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+env
 .env
 .venv
 env/
@@ -159,7 +160,13 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-dailyData/
-probForecast/
-save/
 src/unittests.py
+
+# Folder to test
+data/*/
+data/*.*
+!data/readme.md
+
+# Credenciales
+/cdsapirc
+/.cdsapirc
