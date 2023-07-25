@@ -1,61 +1,34 @@
-# https://cds.climate.copernicus.eu/cdsapp#!/dataset/sis-agrometeorological-indicators?tab=form
-
 import os
 import glob
 import datetime
-
-import datetime
+import urllib.request
 from datetime import timedelta
+from zipfile import ZipFile
 from concurrent.futures import ThreadPoolExecutor
 
-
 import pandas as pd
-import numpy as np
-
-import urllib.request
 from tqdm import tqdm
 
 import rasterio
-from rasterio.transform import from_origin
-from rasterio.warp import calculate_default_transform, reproject, Resampling
-from netCDF4 import Dataset
-
-
-import cdsapi
-import pandas as pd
-
-from zipfile import ZipFile
-
-import rioxarray
 import xarray
 
-class DownloadProgressBar(tqdm):
-    def update_to(self, b=1, bsize=1, tsize=None):
-        if tsize is not None:
-            self.total = tsize
-        self.update(b * bsize - self.n)
+import cdsapi # https://cds.climate.copernicus.eu/cdsapp#!/dataset/sis-agrometeorological-indicators?tab=form
+
+from tools import DownloadProgressBar,DirectoryManager
 
 class DownloadData():
 
     # start_date: start date to download.
     # coords: North, West, South, East
-    def __init__(self,start_date,country,path,region,cores = 1,force = False):
+    def __init__(self,start_date,country,path,cores = 1,force = False):
         self.start_date = start_date
         self.country = country
         self.path = path
-        self.region = region
         self.cores = cores
         self.force = force
         self.end_date = (self.start_date + pd.DateOffset(months=1)) - pd.DateOffset(days=1)
-
+        self.manager = DirectoryManager()
         pass
-    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # Function which creates a folder. It checks if the folders exist before
-    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # (string) path: Path where the folder should be create
-    def mkdir(self,path):
-        if not os.path.exists(path): 
-            os.mkdir(path)
 
     def download_file(self, url, path, force = False):
         if force or os.path.exists(path) == False:
@@ -75,7 +48,7 @@ class DownloadData():
     def download_data_chirp(self,save_path, year_to):
         # Create folder for data
         save_path_chirp = os.path.join(save_path,"chirps")
-        self.mkdir(save_path_chirp)
+        self.manager.mkdir(save_path_chirp)
 
         # Calculate dates to download data
         dates = [self.start_date + timedelta(days=x) for x in range((self.end_date - self.start_date).days + 1)]
@@ -111,7 +84,7 @@ class DownloadData():
 
         # Create folder for data
         save_path_era5 = os.path.join(save_path,"era5")
-        self.mkdir(save_path_era5)
+        self.manager.mkdir(save_path_era5)
 
         # Calculate dates to download data
         year = self.start_date.strftime("%Y")
@@ -125,8 +98,8 @@ class DownloadData():
             save_path_era5 = os.path.join(save_path,"era5",v + ".zip")
             save_path_era5_data = os.path.join(save_path,"era5",v)
             save_path_era5_data_tmp = os.path.join(save_path,"era5",v + "_tmp")
-            self.mkdir(save_path_era5_data)
-            self.mkdir(save_path_era5_data_tmp)
+            self.manager.mkdir(save_path_era5_data)
+            self.manager.mkdir(save_path_era5_data_tmp)
 
             if self.force or os.path.exists(save_path_era5) == False:
                 c = cdsapi.Client()
@@ -136,7 +109,7 @@ class DownloadData():
                         'variable': enum_variables[v]["name"],
                         'statistic': enum_variables[v]["statistics"],
                         # area:  North, West, South, East
-                        'area': f'{self.region[0]}/{self.region[1]}/{self.region[2]}/{self.region[3]}',
+                        #'area': f'{self.region[0]}/{self.region[1]}/{self.region[2]}/{self.region[3]}',
                         'year': year,
                         'month': month,
                         'day': days,
@@ -281,7 +254,6 @@ class DownloadData():
         for index,location in tqdm(locations.iterrows(),desc="Writing scenarios"):
             files = glob.glob(os.path.join(save_path,location["ws"], '*'))
             for f in files:
-                #print(f)
                 # Preparing original files
                 df_tmp = pd.read_csv(f)
                 # Remove records old
@@ -329,7 +301,7 @@ class DownloadData():
         if len(missing_files) > 0:
             print("ERROR Directories don't exist",missing_files)
         else:
-            self.mkdir(path_daily_downloaded)
+            self.manager.mkdir(path_daily_downloaded)
 
             # Download Chirps data
             print("CHIRPS data started!")
