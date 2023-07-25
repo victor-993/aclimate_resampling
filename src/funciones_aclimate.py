@@ -3,6 +3,85 @@
 # Created by: Maria Victoria Diaz
 # Alliance Bioversity, CIAT. 2023
 
+def mdl_verification(daily_weather_data, seasonal_probabilities):
+
+
+    clima = os.listdir(daily_weather_data)
+    clima = [file for file in clima if not file.endswith("_coords.csv")]
+    clima = [file.split(".csv")[0] for file in clima]
+
+    prob = pd.read_csv(seasonal_probabilities)
+
+
+
+    prob = prob[prob['id'].isin(clima)]
+
+
+
+    check_clm = []
+    for i in range(len(clima)):
+        df = pd.read_csv(os.path.join(daily_weather_data, f"{clima[i]}.csv"))
+
+        # 1. max de temp_max == min de temp_max
+        # 2. max de temp_min == min de temp_min
+        # 3. max de srad == min de srad
+
+        max_tmax = df['t_max'].max()
+        min_tmax = df['t_max'].min()
+
+        max_tmin = df['t_min'].max()
+        min_tmin = df['t_min'].min()
+
+        max_srad = df['sol_rad'].max()
+        min_srad = df['sol_rad'].min()
+
+        if max_tmax == min_tmax or max_tmin == min_tmin or max_srad == min_srad:
+            resultado = pd.DataFrame({'code': [clima[i]], 'value': [f"tmax = {max_tmax}; tmin = {max_tmin}; srad = {max_srad}"]})
+        else:
+            resultado = pd.DataFrame({'code': [clima[i]], 'value': ["OK"]})
+        check_clm.append(resultado)
+
+    df = pd.concat(check_clm)
+    df_1 = df[df['value'] == "OK"]
+    df_2 = df[df['value'] != "OK"]
+
+    code_ok = df_1
+    code_problema = df_2
+
+
+    # 1. Probabilidades con cero categoria normal
+    # 2. Probabilidades sumen > 1.1
+    # 3. Probabilidades sumen <  0.9
+
+    prob['sum'] = prob['below'] + prob['normal'] + prob['above']
+    prob.loc[prob['normal'] == 0.00, 'normal'] = -1
+    prob.loc[prob['sum'] < 0.9, 'normal'] = -1
+    prob.loc[prob['sum'] > 1.1, 'normal'] = -1
+
+    df_1 = prob[prob['normal'] == -1]
+    df_2 = prob[(prob['normal'] >= 0) & (prob['normal'] <= 1)]
+
+    code_p_ok = df_2
+    code_p_malos = df_1
+
+    ids_buenos = code_p_ok['id'].tolist()
+
+    result_clima_prob_outside = list(set(clima) - set(code_p_ok['id']))
+
+    code_problema = pd.DataFrame({'ids': [1] + code_problema['code'].tolist(),
+                                  'descripcion': [None] + code_problema['value'].tolist()})
+    code_p_malos = pd.DataFrame({'ids': [1] + code_p_malos['id'].tolist(),
+                                 'descripcion': "Problemas base de datos probabilidad"})
+
+    result_clima_prob_outside = pd.DataFrame({'ids': [1] + result_clima_prob_outside,
+                                              'descripcion': "La estacion esta fuera de area predictora"})
+
+    ids_malos = pd.concat([code_problema, code_p_malos, result_clima_prob_outside])
+    ids_buenos = pd.DataFrame({'ids': ids_buenos})
+    ids_malos = ids_malos.replace(1, pd.NA).dropna()
+
+    result = {'ids_buenos': ids_buenos, 'ids_malos': ids_malos}
+    return result
 
 
 def preprocessing(prob_root,  output_root, forecast_period):
@@ -34,8 +113,9 @@ def preprocessing(prob_root,  output_root, forecast_period):
   months_names = list(calendar.month_name)[1:]
 
   # Read the CPT probabilities file 
-  prob = pd.read_csv(prob_root)
-  prob['below'] = prob['normal'] = prob['above'] = 1/3
+  proba = pd.read_csv(prob_root)
+  ids = ids['ids_buenos']
+  prob = proba[proba['id'].isin(ids['ids'])]
 
   # Check the period of forecast
   if forecast_period == "tri":
@@ -138,199 +218,224 @@ def forecast_station(station, prob, daily_data_root, output_root, year_forecast,
   # Filter the probability data for the station
   cpt_prob = prob[prob['id']==station]
 
-  # Get the season for the forecast
-  season = cpt_prob['Season'].iloc[0]
+  if len(cpt_prob.index) == 0:
+    print('Station does not have probabilites')
+    base_years = 0
+    seasons_range = 0
+    p = {'id': [station],'issue': ['Station does not have probabilites']}
+    problem = pd.DataFrame(p)
 
-  # Adjust the year if the forecast period is 'tri' if necessary
-  if forecast_period == 'tri':
-    year_forecast = [year_forecast+1 if x in ['DJF']  else year_forecast for x in season][0]
-  
-  # Check if year of forecast is a leap year for February
-  leap_forecast = (year_forecast%400 == 0) or (year_forecast%4==0 and year_forecast%100!=0)
+    return base_years, seasons_range, problem
 
-  # Filter the February data for leap years
-  clim_feb = clim.loc[clim['month'] == 2]
-  clim_feb['leap'] = [True if (year%400 == 0) or (year%4==0 and year%100!=0) else False for year in clim_feb['year']]
+  else:
+    # Get the season for the forecast
+    season = cpt_prob['Season'].iloc[0]
 
-  # Standardize february months by year according to year of forecat
-  february = []
-  for i in np.unique(clim_feb['year']):
-    year_data =  clim_feb.loc[clim_feb['year']==i,:]
-    year = year_data.loc[:,'leap']
+    # Adjust the year if the forecast period is 'tri' if necessary
+    if forecast_period == 'tri':
+      year_forecast = [year_forecast+1 if x in ['DJF']  else year_forecast for x in season][0]
     
-    # If year of forecast is a leap year and a year in climate data is not, then add one day to february in climate data
-    if leap_forecast == True and year.iloc[0] == False:
-      year_data.append(year_data.sample(1), ignore_index=True)
-      year_data.iloc[-1,0] = 29
-    else:
+    # Check if year of forecast is a leap year for February
+    leap_forecast = (year_forecast%400 == 0) or (year_forecast%4==0 and year_forecast%100!=0)
 
-      # If year of forecast is not a leap year and a year in climate data is, then remove one day to february in climate data
-      if leap_forecast == False and year.iloc[0] == True:
-         year_data =  year_data.iloc[:-1]
+    # Filter the February data for leap years
+    clim_feb = clim.loc[clim['month'] == 2]
+    clim_feb['leap'] = [True if (year%400 == 0) or (year%4==0 and year%100!=0) else False for year in clim_feb['year']]
+
+    # Standardize february months by year according to year of forecat
+    february = []
+    for i in np.unique(clim_feb['year']):
+      year_data =  clim_feb.loc[clim_feb['year']==i,:]
+      year = year_data.loc[:,'leap']
+      
+      # If year of forecast is a leap year and a year in climate data is not, then add one day to february in climate data
+      if leap_forecast == True and year.iloc[0] == False:
+        year_data.append(year_data.sample(1), ignore_index=True)
+        year_data.iloc[-1,0] = 29
       else:
 
-        # If both year of forecast and year in climate data are leap years or not, then keep climate data the same
-        year_data = year_data
-  february.append(year_data)
+        # If year of forecast is not a leap year and a year in climate data is, then remove one day to february in climate data
+        if leap_forecast == False and year.iloc[0] == True:
+          year_data =  year_data.iloc[:-1]
+        else:
 
-  # Concat standardized february data with the rest of climate data
-  data = pd.concat(february).drop(['leap'], axis = 1 )
-  data = pd.concat([data,clim.loc[clim['month'] != 2]]).sort_values(['year','month'])
+          # If both year of forecast and year in climate data are leap years or not, then keep climate data the same
+          year_data = year_data
+    february.append(year_data)
+
+    # Concat standardized february data with the rest of climate data
+    data = pd.concat(february).drop(['leap'], axis = 1 )
+    data = pd.concat([data,clim.loc[clim['month'] != 2]]).sort_values(['year','month'])
 
 
-  # Start the resampling process for every season of analysis in CPT probabilities file
+    # Start the resampling process for every season of analysis in CPT probabilities file
 
-  base_years = [] # List to store years of sample for each season
-  seasons_range = [] # List to store climate data in the years of sample for each season
+    base_years = [] # List to store years of sample for each season
+    seasons_range = [] # List to store climate data in the years of sample for each season
 
-  for season in  list(np.unique(cpt_prob['Season'])):
+    for season in  list(np.unique(cpt_prob['Season'])):
 
-    # Select the probabilities for the season
-    x = cpt_prob[cpt_prob['Season'] == season] 
+      # Select the probabilities for the season
+      x = cpt_prob[cpt_prob['Season'] == season] 
 
-    if x['Start'].iloc[0] > x['End'].iloc[0]:
-       # In climate data 
-       # If the start month is greater than the end month of the season, select the months from the start and less than the end
-        data_range = data.loc[data['month'] >= x['Start'].iloc[0]]
-        data_range_2 = data.loc[data['month'] <= x['End'].iloc[0]]
-        data_range = data_range.append(data_range_2)
+      if x['Start'].iloc[0] > x['End'].iloc[0]:
+        # In climate data 
+        # If the start month is greater than the end month of the season, select the months from the start and less than the end
+          data_range = data.loc[data['month'] >= x['Start'].iloc[0]]
+          data_range_2 = data.loc[data['month'] <= x['End'].iloc[0]]
+          data_range = data_range.append(data_range_2)
 
-    else:
-        #In climate data
-        #If not, select the months between the start and the end month of season
-        data_range = data.loc[(data['month'] >= x['Start'].iloc[0]) & (data['month'] <= x['End'].iloc[0])]
+      else:
+          #In climate data
+          #If not, select the months between the start and the end month of season
+          data_range = data.loc[(data['month'] >= x['Start'].iloc[0]) & (data['month'] <= x['End'].iloc[0])]
 
-   # Compute total precipitation for each year in the climate data range selected
-    new_data = data_range[['year','prec']].groupby(['year']).sum().reset_index()
+    # Compute total precipitation for each year in the climate data range selected
+      new_data = data_range[['year','prec']].groupby(['year']).sum().reset_index()
 
-    merge = data_range
-    merge['Season'] = season
+      merge = data_range
+      merge['Season'] = season
 
-   # Calculate quantiles to determine precipitation conditions for every year in climate data selected
-    cuantiles = list(np.quantile(new_data['prec'], [.33,.66]))
-    new_data['condition'] =  'NA'
-    new_data.loc[new_data['prec']<= cuantiles[0], 'condition'] = 'below'
-    new_data.loc[new_data['prec']>= cuantiles[1], 'condition'] =  'above'
-    new_data.loc[(new_data['prec']> cuantiles[0]) & (new_data['prec']< cuantiles[1]), 'condition'] =  'normal'
+    # Calculate quantiles to determine precipitation conditions for every year in climate data selected
+      cuantiles = list(np.quantile(new_data['prec'], [.33,.66]))
+      new_data['condition'] =  'NA'
+      new_data.loc[new_data['prec']<= cuantiles[0], 'condition'] = 'below'
+      new_data.loc[new_data['prec']>= cuantiles[1], 'condition'] =  'above'
+      new_data.loc[(new_data['prec']> cuantiles[0]) & (new_data['prec']< cuantiles[1]), 'condition'] =  'normal'
+      
+    # Sample 100 records in probability file of season based on probability from CPT as weights
+      muestras = x[['Start', 'End', 'Type', 'Prob']].sample(100, replace = True, weights=x['Prob'])
+      muestras = muestras.set_index(pd.Index(list(range(0,100))))
     
-  # Sample 100 records in probability file of season based on probability from CPT as weights
-    muestras = x[['Start', 'End', 'Type', 'Prob']].sample(100, replace = True, weights=x['Prob'])
-    muestras = muestras.set_index(pd.Index(list(range(0,100))))
-   
-   # Randomly get one year from the total precipitation data based on precipitation conditions selected in the 100 data sample.
-    muestras_by_type = []
-    for i in muestras.index: 
-      m = new_data.loc[new_data['condition'] == muestras['Type'].iloc[i]].sample(1)
-      muestras_by_type.append(m) 
-    
-    # Join the 100 samples and add sample id
-    muestras_by_type = pd.concat(muestras_by_type).reset_index()
-    muestras_by_type['index'] = muestras.index
-    muestras_by_type = muestras_by_type.set_index(pd.Index(list(range(0,100))))
+    # Randomly get one year from the total precipitation data based on precipitation conditions selected in the 100 data sample.
+      muestras_by_type = []
+      for i in muestras.index: 
+        m = new_data.loc[new_data['condition'] == muestras['Type'].iloc[i]].sample(1)
+        muestras_by_type.append(m) 
+      
+      # Join the 100 samples and add sample id
+      muestras_by_type = pd.concat(muestras_by_type).reset_index()
+      muestras_by_type['index'] = muestras.index
+      muestras_by_type = muestras_by_type.set_index(pd.Index(list(range(0,100))))
 
 
-    # Rename year column with season name  
-    muestras_by_type = muestras_by_type.rename(columns = {'year':season})
+      # Rename year column with season name  
+      muestras_by_type = muestras_by_type.rename(columns = {'year':season})
 
-    # Calculate the next year of the year sample and assign the same sample id 
-    muestras_by_type['plus'] = list(map(lambda x: x + 1, muestras_by_type[season]))
+      # Calculate the next year of the year sample and assign the same sample id 
+      muestras_by_type['plus'] = list(map(lambda x: x + 1, muestras_by_type[season]))
 
-    #Set the sample years as list and sort
-    years = list(muestras_by_type[season])
-    years.sort()
+      #Set the sample years as list and sort
+      years = list(muestras_by_type[season])
+      years.sort()
 
-    if season == 'NDJ':
-      # If season is November-December-January 
-
-      years_plus = list(map(lambda x: x + 1, years))
-      years_plus.sort()
-    
-      months_numbers =[11,12]
-
-      # Filter the climate data of the last two months of the years in the sample and get the sample id 
-      merge_a = merge[merge['year'].isin(years)]
-      merge_a = merge_a[merge_a['month'].isin(months_numbers)]
-      merge_a = pd.merge(merge_a, muestras_by_type[['index', season]], left_on = 'year', right_on = season)
-      merge_a.drop(season, axis = 1,inplace = True)
-
-      # Filter the climate data of the first month in the next year of the years in sample and get the sample id
-      merge_b = merge[merge['year'].isin(years_plus)]
-      merge_b = merge_b[merge_b['month'] == 1]
-      merge_b = pd.merge(merge_b, muestras_by_type[['index', 'plus']], left_on = 'year', right_on = 'plus')
-      merge_b.drop('plus', axis = 1,inplace = True)
-
-      # Merge the climate data filtered
-      merge = merge_a.append(merge_b)
-        
-    else:
-      if season == 'DJF':
-        # If season is December-January-February
+      if season == 'NDJ':
+        # If season is November-December-January 
 
         years_plus = list(map(lambda x: x + 1, years))
         years_plus.sort()
-        months_numbers =[1,2]
+      
+        months_numbers =[11,12]
 
-        # Filter the climate data of the last month of the years in the sample and get the sample id 
+        # Filter the climate data of the last two months of the years in the sample and get the sample id 
         merge_a = merge[merge['year'].isin(years)]
-        merge_a = merge_a[merge_a['month'] == 12]
+        merge_a = merge_a[merge_a['month'].isin(months_numbers)]
         merge_a = pd.merge(merge_a, muestras_by_type[['index', season]], left_on = 'year', right_on = season)
-  
-        # Filter the climate data of the first two months in the next year of the years in sample and get the sample id
+        merge_a.drop(season, axis = 1,inplace = True)
+
+        # Filter the climate data of the first month in the next year of the years in sample and get the sample id
         merge_b = merge[merge['year'].isin(years_plus)]
-        merge_b = merge_b[merge_b['month'].isin(months_numbers)]
+        merge_b = merge_b[merge_b['month'] == 1]
         merge_b = pd.merge(merge_b, muestras_by_type[['index', 'plus']], left_on = 'year', right_on = 'plus')
         merge_b.drop('plus', axis = 1,inplace = True)
 
-        # Merge filtered data
+        # Merge the climate data filtered
         merge = merge_a.append(merge_b)
-
+          
       else:
-        # If season is another, filter climate data of the years in sample and get the sample id
+        if season == 'DJF':
+          # If season is December-January-February
 
-        merge = merge.loc[merge['year'].isin(muestras_by_type[season])]
-        merge = pd.merge(merge,muestras_by_type[['index',season]],left_on = 'year', right_on = season)
-        merge = merge.drop(season, axis = 1)
+          years_plus = list(map(lambda x: x + 1, years))
+          years_plus.sort()
+          months_numbers =[1,2]
 
+          # Filter the climate data of the last month of the years in the sample and get the sample id 
+          merge_a = merge[merge['year'].isin(years)]
+          merge_a = merge_a[merge_a['month'] == 12]
+          merge_a = pd.merge(merge_a, muestras_by_type[['index', season]], left_on = 'year', right_on = season)
+    
+          # Filter the climate data of the first two months in the next year of the years in sample and get the sample id
+          merge_b = merge[merge['year'].isin(years_plus)]
+          merge_b = merge_b[merge_b['month'].isin(months_numbers)]
+          merge_b = pd.merge(merge_b, muestras_by_type[['index', 'plus']], left_on = 'year', right_on = 'plus')
+          merge_b.drop('plus', axis = 1,inplace = True)
 
-    # Append the 100 years in the sample for every season in the list
-    base_years.append(muestras_by_type[['index',season]])
+          # Merge filtered data
+          merge = merge_a.append(merge_b)
 
-    # Append the climate data filtered for every season in the list
-    seasons_range.append(merge)
+        else:
+          # If season is another, filter climate data of the years in sample and get the sample id
 
-  # Create folders to save result
-  if os.path.exists(output_root + "/"+station):
-       output_estacion = output_root + "/"+station
-  else:
-       os.mkdir(output_root +"/"+ station)
-       output_estacion = output_root +"/"+ station
-
- 
-  if forecast_period == 'bi':
-     if os.path.exists(output_estacion+'/bi/'):
-          output_estacion = output_estacion+'/bi/'
-     else:
-         os.mkdir(output_estacion+'/bi/')
-         output_estacion = output_estacion+'/bi/'
-
-  else:
-     if os.path.exists(output_estacion+'/tri/'):
-        output_estacion = output_estacion+'/tri/'
-     else:
-       os.mkdir(output_estacion+'/tri/')
-       output_estacion = output_estacion+'/tri/'
+          merge = merge.loc[merge['year'].isin(muestras_by_type[season])]
+          merge = pd.merge(merge,muestras_by_type[['index',season]],left_on = 'year', right_on = season)
+          merge = merge.drop(season, axis = 1)
 
 
-  # Join seasons samples by column by sample id and save DataFrame in the folder created
-  base_years = pd.concat(base_years, axis = 1).rename(columns={'index': 'id'})
-  base_years = base_years.iloc[:,[0,1,3] ]
-  #base_years.to_csv(output_estacion+ "/samples_for_forecast_"+ forecast_period +".csv", index = False)
+      # Append the 100 years in the sample for every season in the list
+      base_years.append(muestras_by_type[['index',season]])
+
+      # Append the climate data filtered for every season in the list
+      seasons_range.append(merge)
+
+    # Create folders to save result
+    if os.path.exists(output_root + "/"+station):
+        output_estacion = output_root + "/"+station
+    else:
+        os.mkdir(output_root +"/"+ station)
+        output_estacion = output_root +"/"+ station
+
   
-  # Join climate data filtered for the seasons and save DataFrame in the folder created
-  seasons_range = pd.concat(seasons_range).rename(columns={'index': 'id'})
+    if forecast_period == 'bi':
+      if os.path.exists(output_estacion+'/bi/'):
+            output_estacion = output_estacion+'/bi/'
+      else:
+          os.mkdir(output_estacion+'/bi/')
+          output_estacion = output_estacion+'/bi/'
 
-  #Return climate data filtered with sample id 
-  return  base_years, seasons_range
+    else:
+      if os.path.exists(output_estacion+'/tri/'):
+          output_estacion = output_estacion+'/tri/'
+      else:
+        os.mkdir(output_estacion+'/tri/')
+        output_estacion = output_estacion+'/tri/'
+
+
+    # Join seasons samples by column by sample id and save DataFrame in the folder created
+    base_years = pd.concat(base_years, axis = 1).rename(columns={'index': 'id'})
+
+    if len(list(np.unique(cpt_prob['Season']))) ==2:
+          base_years = base_years.iloc[:,[0,1,3] ]
+          base_years.to_csv(output_estacion+ "/samples_for_forecast_"+ forecast_period +".csv", index = False)
+
+          # Join climate data filtered for the seasons and save DataFrame in the folder created
+          seasons_range = pd.concat(seasons_range).rename(columns={'index': 'id'})
+
+          #Return climate data filtered with sample id 
+          return base_years, seasons_range
+
+    else:
+          print('Station just have one season available')
+          base_years = base_years.iloc[:,[0,1] ]
+          p = {'id': [station],'issue': ['Station just have one season available'], 'season': [base_years.columns[1]]}
+          problem = pd.DataFrame(p)
+          base_years.to_csv(output_estacion+ "/samples_for_forecast_"+ forecast_period +".csv", index = False)
+
+          # Join climate data filtered for the seasons and save DataFrame in the folder created
+          seasons_range = pd.concat(seasons_range).rename(columns={'index': 'id'})
+
+          #Return climate data filtered with sample id 
+          return base_years, seasons_range, problem
 
 
 
@@ -366,40 +471,43 @@ def save_forecast(output_root, year_forecast, forecast_period, prob, seasons_ran
    Returns:
         None
   """
-
+  if isinstance(base_years, pd.DataFrame):
   # Set the output root based on forecast period
-  if forecast_period == 'bi':
-     output_estacion = output_root + "/"+station +'/bi/'
+    if forecast_period == 'bi':
+      output_estacion = output_root + "/"+station +'/bi/'
+    else:
+      output_estacion = output_root + "/"+station +'/tri/'
+
+
+    # Filter probability DataFrame by station
+    cpt_prob = prob[prob['id']==station]
+
+    # If forecast period is November-December-January or December-January-February then the year of forecast is the next
+    year_forecast = [year_forecast+1 if x in ['NDJ', 'DJF']  else year_forecast for x in cpt_prob['Season'].iloc[0]][0]
+
+    # Filter climate data by escenry id and save
+    escenarios = []
+    for i in base_years.index:
+        df = seasons_range[(seasons_range['id'] == base_years['id'].iloc[i])]
+        df['year'] = year_forecast
+        df = df.drop(['id', 'Season'], axis = 1)
+        escenarios.append(df)
+        df.to_csv(output_estacion +"_escenario_"+ str(i)+".csv", index=False)
+
+    print("Escenaries saved in {}".format(output_estacion))
+
+    if os.path.exists(output_estacion+ "summary/"):
+        summary_path = output_estacion+ "summary/"
+    else:
+        os.mkdir(output_estacion+ "summary/")
+        summary_path = output_estacion+ "summary/"
+
+    # Calculate maximum and minimum of escenaries by date and save
+    df = pd.concat(escenarios)
+    df.groupby(['day', 'month']).max().reset_index().sort_values(['month', 'day'], ascending = True).to_csv(summary_path+ station+"_max.csv", index=False)
+    df.groupby(['day', 'month']).min().reset_index().sort_values(['month', 'day'], ascending = True).to_csv(summary_path+ station+"_min.csv", index=False)
+    print("Minimum and Maximum of escenaries saved in {}".format(summary_path))
+
   else:
-     output_estacion = output_root + "/"+station +'/tri/'
 
-
-  # Filter probability DataFrame by station
-  cpt_prob = prob[prob['id']==station]
-
-  # If forecast period is November-December-January or December-January-February then the year of forecast is the next
-  year_forecast = [year_forecast+1 if x in ['NDJ', 'DJF']  else year_forecast for x in cpt_prob['Season'].iloc[0]][0]
-
-  # Filter climate data by escenry id and save
-  escenarios = []
-  for i in base_years.index:
-      df = seasons_range[(seasons_range['id'] == base_years['id'].iloc[i])]
-      df['year'] = year_forecast
-      df = df.drop(['id', 'Season'], axis = 1)
-      escenarios.append(df)
-      df.to_csv(output_estacion +"_escenario_"+ str(i)+".csv", index=False)
-
-  print("Escenaries saved in {}".format(output_estacion))
-
-  if os.path.exists(output_estacion+ "/summary/"):
-      summary_path = output_estacion+ "/summary/"
-  else:
-      os.mkdir(output_estacion+ "/summary/")
-      summary_path = output_estacion+ "/summary/"
-
-  # Calculate maximum and minimum of escenaries by date and save
-  df = pd.concat(escenarios)
-  df.groupby(['day', 'month']).max().reset_index().sort_values(['month', 'day'], ascending = True).to_csv(summary_path+ station+"_max.csv", index=False)
-  df.groupby(['day', 'month']).min().reset_index().sort_values(['month', 'day'], ascending = True).to_csv(summary_path+ station+"_min.csv", index=False)
-  print("Minimum and Maximum of escenaries saved in {}".format(summary_path))
-
+    return None

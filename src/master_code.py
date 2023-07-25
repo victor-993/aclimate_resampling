@@ -7,7 +7,7 @@
 from funciones_aclimate import *
 
 
-def resampling_master(station, input_root, climate_data_root, output_root, year_forecast, forecast_period = 3):
+def resampling_master(station, input_root, climate_data_root, proba, output_root, year_forecast, forecast_period = 3):
 
     import pandas as pd
     import calendar
@@ -17,28 +17,41 @@ def resampling_master(station, input_root, climate_data_root, output_root, year_
     import warnings
     warnings.filterwarnings("ignore")
 
+    if os.path.exists(output_root):
+        output_root = output_root
+    else:
+        os.mkdir(output_root)
 
-    
+    print("Fixing issues in the databases")
+    verifica = mdl_verification(ruta_daily_data, ruta_probabilidades)
+
+
+
     print("Reading the probability file and getting the forecast seasons")
-    prob_normalized = processing(input_root, output_root, forecast_period)
+    prob_normalized = preprocessing(input_root, verifica, output_root, forecast_period)
 
 
 
     print("Resampling and creating the forecast scenaries")
-    resampling_forecast = forecast_station(station = station, 
-                                           prob = prob_normalized, 
-                                           daily_data_root = climate_data_root, 
-                                           output_root = output_root, 
-                                           year_forecast = year_forecast, 
+    resampling_forecast = forecast_station(station = station,
+                                           prob = prob_normalized,
+                                           daily_data_root = climate_data_root,
+                                           output_root = output_root,
+                                           year_forecast = year_forecast,
                                            forecast_period= forecast_period)
-    
+
 
 
     print("Saving escenaries and a summary")
-    save_forecast(output_root = output_root, 
+    save_forecast(output_root = output_root,
                   year_forecast = year_forecast,
-                  forecast_period = forecast_period, 
-                  prob = prob_normalized, 
-                  base_years = resampling_forecast[0], 
-                  seasons_range = resampling_forecast[1], 
+                  forecast_period = forecast_period,
+                  prob = prob_normalized,
+                  base_years = resampling_forecast[0],
+                  seasons_range = resampling_forecast[1],
                   station = station)
+
+    if len(resampling_forecast) == 3:
+        return resampling_forecast[2]
+    else:
+        return None
