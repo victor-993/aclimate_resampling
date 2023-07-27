@@ -61,7 +61,7 @@ import datetime
 
 import pandas as pd
 
-from download_data import DownloadData
+from complete_data import CompleteData
 
 
 if __name__ == "__main__":
@@ -74,6 +74,6 @@ if __name__ == "__main__":
     ##region = [14,32,3,48] # North, West, South, East
     ##region = [0,28,-12,41] # North, West, South, East
     cores = 2
-    #dd = DownloadData(start_date,country,path,region,cores=cores)
-    dd = DownloadData(start_date,country,path,cores=cores)
+    #dd = CompleteData(start_date,country,path,region,cores=cores)
+    dd = CompleteData(start_date,country,path,cores=cores)
     dd.run()

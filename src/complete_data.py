@@ -17,7 +17,7 @@ import cdsapi # https://cds.climate.copernicus.eu/cdsapp#!/dataset/sis-agrometeo
 
 from tools import DownloadProgressBar,DirectoryManager
 
-class DownloadData():
+class CompleteData():
 
     # start_date: start date to download.
     def __init__(self,start_date,country,path,cores = 1,force = False):
