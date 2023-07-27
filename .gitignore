@@ -170,3 +170,5 @@ data/*.*
 # Credenciales
 /cdsapirc
 /.cdsapirc
+
+test/test_files

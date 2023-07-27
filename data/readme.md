@@ -1,3 +1,3 @@
-# NOTE
+# Data
 
-This folder is to test the scripts
+This folder contains some inputs files to test the scripts
