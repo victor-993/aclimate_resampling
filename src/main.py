@@ -56,12 +56,12 @@ def resampling_master(station, input_root, climate_data_root, proba, output_root
     else:
         return None
     
-"""
+
 import datetime
 
 import pandas as pd
 
-from src.download_data import DownloadData
+from download_data import DownloadData
 
 
 if __name__ == "__main__":
@@ -77,4 +77,3 @@ if __name__ == "__main__":
     #dd = DownloadData(start_date,country,path,region,cores=cores)
     dd = DownloadData(start_date,country,path,cores=cores)
     dd.run()
-"""

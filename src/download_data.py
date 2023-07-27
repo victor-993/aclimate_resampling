@@ -4,6 +4,7 @@ import datetime
 import urllib.request
 from datetime import timedelta
 from zipfile import ZipFile
+import gzip
 from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
@@ -19,7 +20,6 @@ from tools import DownloadProgressBar,DirectoryManager
 class DownloadData():
 
     # start_date: start date to download.
-    # coords: North, West, South, East
     def __init__(self,start_date,country,path,cores = 1,force = False):
         self.start_date = start_date
         self.country = country
@@ -34,6 +34,10 @@ class DownloadData():
         if force or os.path.exists(path) == False:
             with DownloadProgressBar(unit='B', unit_scale=True,miniters=1, desc=url.split('/')[-1]) as t:
                 urllib.request.urlretrieve(url, filename=path, reporthook=t.update_to)
+            with gzip.open(path, 'rb') as f_in:
+                with open(path.replace('.gz',''), 'wb') as f_out:
+                # Read the compressed content and write it to the output file
+                    f_out.write(f_in.read())
         else:
             print("\tFile already downloaded!",path)
 
@@ -54,7 +58,7 @@ class DownloadData():
         dates = [self.start_date + timedelta(days=x) for x in range((self.end_date - self.start_date).days + 1)]
 
         # Creating a list of all files that should be downloaded
-        urls = [f"http://data.chc.ucsb.edu/products/CHIRP/daily/{year_to}/chirp.{date.strftime('%Y.%m.%d')}.tif" for date in dates]
+        urls = [f"http://data.chc.ucsb.edu/products/CHIRP/daily/{year_to}/chirp.{date.strftime('%Y.%m.%d')}.tif.gz" for date in dates]
         files = [os.path.basename(url) for url in urls]
         save_path_chirp_all = [os.path.join(save_path_chirp, file) for file in files]
         force_all = [self.force] * len(files)
@@ -75,11 +79,17 @@ class DownloadData():
         # Define the variables classes and their parameters for the CDSAPI
         enum_variables ={
                             "t_max":{"name":"2m_temperature",
-                                    "statistics":['24_hour_maximum']},
+                                    "statistics":['24_hour_maximum'],
+                                    "transform":"-",
+                                    "value":273.15},
                             "t_min":{"name":"2m_temperature",
-                                    "statistics":['24_hour_minimum']},
+                                    "statistics":['24_hour_minimum'],
+                                    "transform":"-",
+                                    "value":273.15},
                             "sol_rad":{"name":"solar_radiation_flux",
-                                    "statistics":[]}
+                                    "statistics":[],
+                                    "transform":"/",
+                                    "value":1000000}
                         }
 
         # Create folder for data
@@ -138,6 +148,10 @@ class DownloadData():
                     output_file = os.path.join(save_path_era5_data,file.split(os.path.sep)[-1].replace(".nc",".tif"))
 
                     xds = xarray.open_dataset(input_file)
+                    if enum_variables[v]["transform"] == "-":
+                        xds = xds - enum_variables[v]["value"]
+                    elif enum_variables[v]["transform"] == "/":
+                        xds = xds / enum_variables[v]["value"]
                     xds.rio.write_crs(new_crs, inplace=True)
                     variable_names = list(xds.variables)
                     xds[variable_names[3]].rio.to_raster(output_file)

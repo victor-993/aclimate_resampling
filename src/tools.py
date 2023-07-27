@@ -13,5 +13,5 @@ class DirectoryManager():
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # (string) path: Path where the folder should be create
     def mkdir(self,path):
-        if not os.path.exists(path): 
+        if path != "" and not os.path.exists(path): 
             os.mkdir(path)
