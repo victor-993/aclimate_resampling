@@ -1,3 +1,4 @@
+import sys
 import os
 import glob
 import datetime
@@ -14,6 +15,8 @@ import rasterio
 import xarray
 
 import cdsapi # https://cds.climate.copernicus.eu/cdsapp#!/dataset/sis-agrometeorological-indicators?tab=form
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from tools import DownloadProgressBar,DirectoryManager
 

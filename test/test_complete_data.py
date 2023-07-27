@@ -1,7 +1,11 @@
-import unittest
+import sys
 import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import unittest
 from datetime import datetime
-from complete_data import CompleteData
+from src.complete_data import CompleteData
 
 class TestCompleteData(unittest.TestCase):
 
