@@ -33,14 +33,24 @@ class CompleteData():
         self.manager = DirectoryManager()
         pass
 
-    def download_file(self, url, path, force = False):
-        if force or os.path.exists(path) == False:
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # Function to download data
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # url: url of the file
+    # path: path to save file.
+    # force: If you want to force to execute the process
+    # remove: Set if you want to remove the gz file
+    def download_file(self, url, path, force = False, remove = True):
+        if force or os.path.exists(path.replace('.gz','')) == False:
+            if os.path.exists(path.replace('.gz','')):
+                os.remove(path.replace('.gz',''))
             with DownloadProgressBar(unit='B', unit_scale=True,miniters=1, desc=url.split('/')[-1]) as t:
                 urllib.request.urlretrieve(url, filename=path, reporthook=t.update_to)
             with gzip.open(path, 'rb') as f_in:
                 with open(path.replace('.gz',''), 'wb') as f_out:
                 # Read the compressed content and write it to the output file
                     f_out.write(f_in.read())
+            os.remove(path)
         else:
             print("\tFile already downloaded!",path)
 
@@ -236,7 +246,7 @@ class CompleteData():
     def extract_climatology(self,save_path,locations):
         df = pd.DataFrame()
         # Loop for each location
-        for index,location in tqdm(locations.iterrows(),desc="Calculating climatology"):
+        for index,location in tqdm(locations.iterrows(),total=locations.shape[0],desc="Calculating climatology"):
             file_path = os.path.join(save_path,location["ws"] + ".csv")
             df_tmp = pd.read_csv(file_path)
             df_tmp = df_tmp.groupby(['day', 'month']).agg({
@@ -268,7 +278,7 @@ class CompleteData():
     def write_outputs(self,save_path,locations,data,climatology,variables=['prec','t_max','t_min','sol_rad']):
         cols_date = ['day','month','year']
         cols_total = cols_date + variables
-        for index,location in tqdm(locations.iterrows(),desc="Writing scenarios"):
+        for index,location in tqdm(locations.iterrows(),total=locations.shape[0],desc="Writing scenarios"):
             files = glob.glob(os.path.join(save_path,location["ws"], '*'))
             for f in files:
                 # Preparing original files
