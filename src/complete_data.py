@@ -31,7 +31,6 @@ class CompleteData():
         self.force = force
         self.end_date = (self.start_date + pd.DateOffset(months=1)) - pd.DateOffset(days=1)
         self.manager = DirectoryManager()
-        pass
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to download data

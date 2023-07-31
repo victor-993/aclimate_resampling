@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import unittest
 from datetime import datetime
+from datetime import timedelta
 from src.complete_data import CompleteData
 
 class TestCompleteData(unittest.TestCase):
@@ -13,6 +14,7 @@ class TestCompleteData(unittest.TestCase):
     def setUp(self):
         # Create a temporary test directory to store downloaded files
         self.start_date = datetime(2023, 6, 1)
+        self.end_date = datetime(2023, 6, 3)  # Only 3 days for this test
         self.cores = 2
         self.root_data = os.path.abspath(os.path.join(os.path.dirname(__file__), 'test_files'))
         self.country = 'ETHIOPIA'
@@ -28,8 +30,12 @@ class TestCompleteData(unittest.TestCase):
 
     def tearDown(self):
         # Clean up the temporary test directory and its contents after each test
-        #shutil.rmtree(self.root_data)
+        shutil.rmtree(self.root_data)
         pass
+
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # TEST DOWNLOAD FILE
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
     def test_download_file_force_false(self):
         # Test downloading a file with force=False (file already exists)
@@ -50,6 +56,10 @@ class TestCompleteData(unittest.TestCase):
         # Test downloading a file with force=True
         complete_data = CompleteData(self.start_date, self.country, self.root_data, cores=self.cores)
         
+        # Create an empty file to simulate an already downloaded file
+        if not(os.path.exists(self.chirps_file_path)):
+            os.makedirs(self.chirps_path, exist_ok=True)
+            open(self.chirps_file_path, 'w').close()
         # Ensure the file exist before downloading
         self.assertTrue(os.path.exists(self.chirps_file_path))
         
@@ -73,6 +83,49 @@ class TestCompleteData(unittest.TestCase):
         
         # Check if the file was downloaded and extracted
         self.assertTrue(os.path.exists(self.chirps_file_path))
+
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # TEST DOWNLOAD DATA CHIRP
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+    def test_download_data_chirp(self):
+        # Test downloading chirp data for a specific period
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Perform the download
+        complete_data.download_data_chirp(self.daily_downloaded_path, year_to=self.start_date.year)
+
+        # Check if the chirp data files were downloaded and stored in the correct location
+        dates = [self.start_date + timedelta(days=x) for x in range((self.end_date - self.start_date).days + 1)]
+        expected_files = [f"chirp.{date.strftime('%Y.%m.%d')}.tif" for date in dates]
+        for file in expected_files:
+            file_path = os.path.join(self.chirps_path, file)
+            self.assertTrue(os.path.exists(file_path))
+
+    def test_download_data_chirp_existing_files(self):
+        # Test downloading chirp data when some files already exist and force=False
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Create some mock chirp data files
+        for date in [self.start_date + timedelta(days=1), self.start_date + timedelta(days=2)]:
+            file_name = f"chirp.{date.strftime('%Y.%m.%d')}.tif"
+            file_path = os.path.join(self.chirps_path, file_name)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            with open(file_path, 'w') as f:
+                f.write("Mock data")
+
+        # Perform the download
+        complete_data.download_data_chirp(self.daily_downloaded_path, year_to=self.start_date.year)
+
+        # Check if the existing files were not downloaded again
+        for date in [self.start_date + timedelta(days=1), self.start_date + timedelta(days=2)]:
+            file_name = f"chirp.{date.strftime('%Y.%m.%d')}.tif"
+            file_path = os.path.join(self.chirps_path, file_name)
+            self.assertTrue(os.path.exists(file_path))
+            self.assertEqual(os.path.getsize(file_path), 9)  # Size of the "Mock data"
+
 
 if __name__ == '__main__':
     unittest.main()
