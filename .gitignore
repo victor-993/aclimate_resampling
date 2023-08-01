@@ -163,9 +163,9 @@ cython_debug/
 src/unittests.py
 
 # Folder to test
-data/*/
-data/*.*
-!data/readme.md
+#data/*/
+#data/*.*
+#!data/readme.md
 
 # Credenciales
 /cdsapirc
