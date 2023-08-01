@@ -28,5 +28,3 @@ if __name__ == "__main__":
     ar.resampling_master()
     dd = CompleteData(start_date,country,path,cores=cores)
     dd.run()
-
-#python resampling.py "ETHIOPIA" "D:\\CIAT\\Code\\USAID\\aclimate_resampling\\data\\" "-1" 2

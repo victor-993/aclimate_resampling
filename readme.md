@@ -48,3 +48,11 @@ If you want to download a specific version of orm you can do so by indicating th
 ````bash
 pip install git+https://github.com/CIAT-DAPA/aclimate_resampling@v0.2.0
 ````
+
+## Run
+
+This module can be executed as a program:
+
+````bash
+python resampling.py "ETHIOPIA" "D:\\aclimate_resampling\\data\\" "-1" 2
+````
