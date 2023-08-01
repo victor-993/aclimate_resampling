@@ -1,3 +1,7 @@
+# Functions to complete month in the climate scenarios
+# Created by: Steven Sotelo
+# Alliance Bioversity, CIAT. 2023
+
 import sys
 import os
 import glob

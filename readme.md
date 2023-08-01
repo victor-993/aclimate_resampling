@@ -56,3 +56,9 @@ This module can be executed as a program:
 ````bash
 python resampling.py "ETHIOPIA" "D:\\aclimate_resampling\\data\\" "-1" 2
 ````
+
+### Params
+- 0: Country  - Name of the country to be processed
+- 1: Path root - Root path where the forecast is running
+- 2: Previous months - Amount of months that you want to add
+- 3: Cores - Number of cores to use in the calculation
