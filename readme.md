@@ -8,11 +8,23 @@ This repository contains all related to resampling module for AClimate
 
 - Generate climate scenarios base on probabilities
 - Complete daily data using CHIRPS and ERA 5
+- Include data for case use in **data** folder
+- Include modules to configure the env in **modules** folder
 
 ## Prerequisites
 
 - Python 3.x
 - You need the .cdsapirc file which should be in $HOME if you are using linux or User Home if you use Windows
+
+## Configure DEV Enviroment
+
+You should create a env to run the code and install the requeriments
+
+````bash
+pip install virtualenv
+venv env
+pip install -r requirements.txt
+````
 
 ## Run Test
 
