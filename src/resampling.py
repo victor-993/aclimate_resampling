@@ -1,9 +1,37 @@
+import sys
+import datetime
+import pandas as pd
+from dateutil.relativedelta import relativedelta
+
+from complete_data import CompleteData
+
+
+if __name__ == "__main__":
+    # Params
+    # 0: Country
+    # 1: Path root
+    # 2: Previous months
+    # 3: Cores
+    parameters = sys.argv[2:]
+    print("Reading inputs")
+    #country = "ETHIOPIA"
+    country = parameters[0]
+    #path = "D:\\CIAT\\Code\\USAID\\aclimate_resampling\\data\\"
+    path = parameters[1]
+    #start_date = (datetime.date.today() - pd.DateOffset(months=1)).replace(day=1)
+    months_previous = int(parameters[2])
+    start_date = (datetime.date.today() - pd.DateOffset(months=months_previous)).replace(day=1)
+    cores = int(parameters[3])
+    
+    dd = CompleteData(start_date,country,path,cores=cores)
+    dd.run()
+
 
 # -*- coding: utf-8 -*-
 # Run all the functions together
 # Created by: Maria Victoria Diaz
 # Alliance Bioversity, CIAT. 2023
-
+"""
 from funciones_aclimate import *
 
 
@@ -55,21 +83,4 @@ def resampling_master(station, input_root, climate_data_root, proba, output_root
         return resampling_forecast[2]
     else:
         return None
-    
-
-import datetime
-
-import pandas as pd
-
-from complete_data import CompleteData
-
-
-if __name__ == "__main__":
-    print("Setting global parameters")
-    start_date = (datetime.date.today() - pd.DateOffset(months=1)).replace(day=1)
-    country = "ETHIOPIA"
-    path = "D:\\CIAT\\Code\\USAID\\aclimate_resampling\\data\\"
-    cores = 2
-    
-    dd = CompleteData(start_date,country,path,cores=cores)
-    dd.run()
+"""
