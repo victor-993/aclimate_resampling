@@ -2,6 +2,7 @@ import sys
 import os
 import shutil
 import glob
+from zipfile import ZipFile
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -51,6 +52,12 @@ class TestCompleteData(unittest.TestCase):
         era5_src = os.path.join(self.data,self.era5_data)
         chirp_dst = os.path.join(self.chirps_path,self.chirp_data)
         era5_dst = os.path.join(self.era5_path,self.variable_era5,self.era5_data)
+
+        with ZipFile(chirp_src + ".zip", 'r') as zObject:
+            zObject.extractall(path=chirp_src)
+        with ZipFile(era5_src + ".zip", 'r') as zObject:
+            zObject.extractall(path=era5_src)
+
         if not(os.path.exists(chirp_dst)):
             shutil.copyfile(chirp_src, chirp_dst)
         if not(os.path.exists(era5_src)):
@@ -343,5 +350,86 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
     # TEST EXTRACT CLIMATOLOGY
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
+    def create_mock_climatology_data(self, location_name, data):
+        # Create a mock climatology data file for testing
+        file_path = os.path.join(self.test_path, f"{location_name}.csv")
+        data.to_csv(file_path, index=False)
+
+    def test_extract_climatology_single_location(self):
+        # Test extracting climatology for a single location
+        start_date = datetime.datetime(2023, 7, 1)
+        country = 'US'
+        path = self.test_path
+        complete_data = CompleteData(start_date=start_date, country=country, path=path, cores=1, force=False)
+
+        # Create a mock climatology data file for a single location
+        location_name = 'Location 1'
+        data = pd.DataFrame({
+            'ws': [location_name] * 12,
+            'day': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            'month': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            'year': [2023] * 12,
+            'prec': [10, 20, 15, 30, 25, 35, 40, 45, 50, 55, 60, 65],
+            't_max': [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
+            't_min': [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65],
+            'sol_rad': [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200]
+        })
+        self.create_mock_climatology_data(location_name, data)
+
+        # Create a mock locations DataFrame with a single location
+        locations = pd.DataFrame({
+            'ws': [location_name],
+            'lat': [40.0],
+            'lon': [-120.0]
+        })
+
+        # Perform the extraction
+        extracted_data = complete_data.extract_climatology(path, locations)
+
+        # Check if the extracted data is correct
+        expected_data = data.loc[data['month'] == 7].copy()
+        expected_data["year"] = 2023
+        expected_data = expected_data[['ws', 'day', 'month', 'year', 'prec', 't_max', 't_min', 'sol_rad']]
+        pd.testing.assert_frame_equal(extracted_data, expected_data)
+
+    def test_extract_climatology_multiple_locations(self):
+        # Test extracting climatology for multiple locations
+        start_date = datetime.datetime(2023, 7, 1)
+        country = 'US'
+        path = self.test_path
+        complete_data = CompleteData(start_date=start_date, country=country, path=path, cores=1, force=False)
+
+        # Create mock climatology data files for multiple locations
+        location1_data = pd.DataFrame({
+            'ws': ['Location 1'] * 12,
+            'day': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            'month': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            'year': [2023] * 12,
+            'prec': [10, 20, 15, 30, 25, 35, 40, 45, 50, 55, 60, 65],
+            't_max': [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
+            't_min': [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65],
+            'sol_rad': [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200]
+        })
+        self.create_mock_climatology_data('Location 1', location1_data)
+
+        location2_data = pd.DataFrame({
+            'ws': ['Location 2'] * 12,
+            'day': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            'month': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            'year': [2023] * 12,
+            'prec': [20, 30, 25, 40, 35, 45, 50, 55, 60, 65, 70, 75],
+            't_max': [35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+            't_min': [15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
+            'sol_rad': [200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300]
+        })
+        self.create_mock_climatology_data('Location 2', location2_data)
+
+        # Create a mock locations DataFrame with multiple locations
+        locations = pd.DataFrame({
+            'ws': ['Location 1', 'Location 2'],
+            'lat': [40.0, 41.0],
+            'lon': [-120.0, -121.0]
+        })
+
 if __name__ == '__main__':
     unittest.main()
