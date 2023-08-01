@@ -54,7 +54,7 @@ pip install git+https://github.com/CIAT-DAPA/aclimate_resampling@v0.2.0
 This module can be executed as a program:
 
 ````bash
-python resampling.py "ETHIOPIA" "D:\\aclimate_resampling\\data\\" "-1" 2
+python aclimate_resampling.py "ETHIOPIA" "D:\\aclimate_resampling\\data\\" "-1" 2
 ````
 
 ### Params
