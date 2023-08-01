@@ -6,7 +6,7 @@ import numpy as np
 
 from funciones_aclimate import preprocessing, forecast_station, save_forecast
 
-class ForecastStationTests(unittest.TestCase):
+class TestAClimateResampling(unittest.TestCase):
     def setUp(self):
         # Define sample input data for testing
         self.station = "62a74f9bea81f11fe450cbc4"
