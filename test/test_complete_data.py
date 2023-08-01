@@ -9,6 +9,7 @@ import unittest
 from datetime import datetime
 from datetime import timedelta
 from src.complete_data import CompleteData
+import pandas as pd
 
 class TestCompleteData(unittest.TestCase):
 
@@ -28,7 +29,14 @@ class TestCompleteData(unittest.TestCase):
         self.chirps_file_path_compressed = os.path.join(self.chirps_path, self.chirps_url_name)
         self.url = f"http://data.chc.ucsb.edu/products/CHIRP/daily/{str(self.start_date.year)}/{self.chirps_url_name}"
         self.era5_path = os.path.join(self.daily_downloaded_path, "era5")
+        self.data = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+        self.variable_era5 = "t_max"
+        self.chirp_data = "chirp.2023.06.01.tif"
+        self.era5_data = "Temperature-Air-2m-Max-24h_C3S-glob-agric_AgERA5_20230601_final-v1.0.tif"
+        self.location = pd.DataFrame({'ws': ['Test Location'], 'lat': [6.4095], 'lon': [-72.0211]})
+        self.locations = pd.DataFrame({ 'ws': ['Location 1', 'Location 2'], 'lat': [6.4095, 6.3830], 'lon': [-72.0211, -71.8700]})
         os.makedirs(self.chirps_path, exist_ok=True)
+        os.makedirs(os.path.join(self.era5_path,self.variable_era5), exist_ok=True)
 
         # Leap year
         self.start_date_leapyear = datetime(2020, 2, 1)
@@ -37,6 +45,16 @@ class TestCompleteData(unittest.TestCase):
         # Clean up the temporary test directory and its contents after each test
         shutil.rmtree(self.root_data)
         pass
+
+    def create_mock_raster(self):
+        chirp_src = os.path.join(self.data,self.chirp_data)
+        era5_src = os.path.join(self.data,self.era5_data)
+        chirp_dst = os.path.join(self.chirps_path,self.chirp_data)
+        era5_dst = os.path.join(self.era5_path,self.variable_era5,self.era5_data)
+        if not(os.path.exists(chirp_dst)):
+            shutil.copyfile(chirp_src, chirp_dst)
+        if not(os.path.exists(era5_src)):
+            shutil.copyfile(era5_src, era5_dst)
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD FILE
@@ -192,5 +210,138 @@ class TestCompleteData(unittest.TestCase):
         transformed_files = glob.glob(os.path.join(variable_path, '*.tif'))
         self.assertEqual(len(transformed_files), 29)  # 30 days of data downloaded
 
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # TEST EXTRACT VALUES
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    def test_extract_values_single_file_single_location_chirp(self):
+        variable = 'prec'
+        # Test extracting values for a single file and a single location
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Copy the two raster for testing
+        self.create_mock_raster()
+
+        # Perform the extraction
+        extracted_data = complete_data.extract_values(self.chirps_path, variable, self.location, -14,-4,'%Y.%m.%d')
+
+        # Check if the extracted data is correct
+        expected_data = [{'ws': 'Test Location', 'day': 1, 'month': 6, 'year': 2023, variable: 20.493248}]
+        self.assertEqual(extracted_data, expected_data)
+
+    def test_extract_values_single_file_single_location_era5(self):
+        variable = self.variable_era5
+        # Test extracting values for a single file and a single location
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Copy the two raster for testing
+        self.create_mock_raster()
+
+        # Perform the extraction
+        extracted_data = complete_data.extract_values(os.path.join(self.era5_data,variable), variable, self.location, -23,-15,'%Y%m%d')
+
+        # Check if the extracted data is correct
+        expected_data = [{'ws': 'Test Location', 'day': 1, 'month': 6, 'year': 2023, variable: 20.708344}]
+
+        self.assertEqual(extracted_data, expected_data)
+
+    def test_extract_values_multiple_files_multiple_locations_chirp(self):
+        # Test extracting values for multiple files and multiple locations
+        variable = 'prec'
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Copy the two raster for testing
+        self.create_mock_raster()
+
+        # Perform the extraction
+        extracted_data = complete_data.extract_values(self.chirps_path, variable, self.locations, -14,-4,'%Y.%m.%d')
+
+        # Check if the extracted data is correct
+        expected_data = [
+            {'ws': 'Location 1', 'day': 1, 'month': 6, 'year': 2023, variable: 20.493248},
+            {'ws': 'Location 2', 'day': 1, 'month': 6, 'year': 2023, variable: 11.695796}
+        ]
+        self.assertEqual(extracted_data, expected_data)
+
+    def test_extract_values_multiple_files_multiple_locations_era5(self):
+        # Test extracting values for multiple files and multiple locations
+        variable = self.variable_era5
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Copy the two raster for testing
+        self.create_mock_raster()
+
+        # Perform the extraction
+        extracted_data = complete_data.extract_values(os.path.join(self.era5_data,variable), variable, self.locations, -23,-15,'%Y%m%d')
+
+        # Check if the extracted data is correct
+        expected_data = [
+            {'ws': 'Location 1', 'day': 1, 'month': 6, 'year': 2023, variable: 20.708344},
+            {'ws': 'Location 2', 'day': 1, 'month': 6, 'year': 2023, variable: 25.889648}
+        ]
+        self.assertEqual(extracted_data, expected_data)
+
+    # =-=-=-=-=-=-=-=-=-
+    # TEST EXTRACT CHIRP
+    # =-=-=-=-=-=-=-=-=-
+
+    def test_extract_chirp_data_single_location(self):
+        # Test extracting chirp data for a single location
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Perform the extraction
+        extracted_data = complete_data.extract_chirp_data(self.daily_downloaded_path, self.location)
+
+        # Check if the extracted data is correct
+        expected_data = pd.DataFrame({
+            'ws': ['Test Location'],
+            'day': [1],
+            'month': [6],
+            'year': [2023],
+            'prec': [20.493248]
+        })
+        pd.testing.assert_frame_equal(extracted_data, expected_data)
+
+    def test_extract_chirp_data_multiple_locations(self):
+        # Test extracting chirp data for a single location
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Perform the extraction
+        extracted_data = complete_data.extract_chirp_data(self.daily_downloaded_path, self.location)
+
+        # Check if the extracted data is correct
+        expected_data = pd.DataFrame({
+            'ws': ['Test Location'],
+            'day': [1,1],
+            'month': [6,6],
+            'year': [2023,2023],
+            'prec': [20.493248,11.695796]
+        })
+        pd.testing.assert_frame_equal(extracted_data, expected_data)
+
+    # =-=-=-=-=-=-=-=-=-
+    # TEST EXTRACT ERA 5
+    # =-=-=-=-=-=-=-=-=-
+
+    def test_extract_era5_data_multiple_locations_single_variable(self):
+        # Test extracting era5 data for multiple locations and a single variable
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Perform the extraction for t_max variable
+        extracted_data = complete_data.extract_era5_data(self.daily_downloaded_path, self.location, variables=[self.variable_era5])
+
+        # Check if the extracted data is correct
+        expected_data = pd.DataFrame({
+            'ws': ['Location 1', 'Location 2'],
+            'day': [1, 1],
+            'month': [6, 6],
+            'year': [2023, 2023],
+            't_max': [20.708344, 25.889648]
+        })
+
+        pd.testing.assert_frame_equal(extracted_data, expected_data)
+
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-
+    # TEST EXTRACT CLIMATOLOGY
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-
 if __name__ == '__main__':
     unittest.main()
