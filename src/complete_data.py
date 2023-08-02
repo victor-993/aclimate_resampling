@@ -277,7 +277,6 @@ class CompleteData():
     # save_path:  Resampling output path
     # locations: Dataframe with coordinates for each location that we want to extract.
     # data: Dataframe with months generate
-    # OUTPUT: This return climatology
     def write_outputs(self,save_path,locations,data,climatology,variables=['prec','t_max','t_min','sol_rad']):
         cols_date = ['day','month','year']
         cols_total = cols_date + variables
@@ -300,6 +299,27 @@ class CompleteData():
                 #df_data = df_data.append(df_tmp,ignore_index=True)
                 df_data = pd.concat([df_data,df_tmp], ignore_index=True)
                 df_data.to_csv(f,index=False)
+
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # Function to list all weather stations
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # resampling_path:  path where the climate scenarios are
+    # daily_path: path where the daily data
+    # OUTPUT: Dataframe with a list of all weather stations
+    def list_ws(self, resampling_path, daily_path):
+        errors = 0
+        df_ws = pd.DataFrame(columns=["ws","lat","lon","message"])
+        df_ws["ws"] =[w.split(os.path.sep)[-1] for w in glob.glob(os.path.join(resampling_path, '*'))]
+        for index,row in df_ws.iterrows():
+            try:
+                df_tmp = pd.read_csv(os.path.join(daily_path,row["ws"] + "_coords.csv"))
+                df_ws.at[index,"lat"],df_ws.at[index,"lon"] = df_tmp.at[0,"lat"],df_tmp.at[0,"lon"]
+            except Exception:
+                errors += 1
+                df_ws.at[index,"message"] = "ERROR with coordinates"
+        if errors > 0:
+            print("WARNING: Stations with problems",df_ws.loc[df_ws["message"].isna() == False,:])
+        return df_ws
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to runs all process
@@ -344,33 +364,21 @@ class CompleteData():
             print("ERA 5 data downloaded!")
 
             # Final list of stations to be processed
-            print("Listing final stations")
-            errors = 0
-            df_ws = pd.DataFrame(columns=["ws","lat","lon","message"])
-            df_ws["ws"] =[w.split(os.path.sep)[-1] for w in glob.glob(os.path.join(path_resampling, '*'))]
-            for index,row in df_ws.iterrows():
-                try:
-                    df_tmp = pd.read_csv(os.path.join(path_daily_data,row["ws"] + "_coords.csv"))
-                    df_ws.at[index,"lat"],df_ws.at[index,"lon"] = df_tmp.at[0,"lat"],df_tmp.at[0,"lon"]
-                except Exception:
-                    errors += 1
-                    df_ws.at[index,"message"] = "ERROR with coordinates"
+            print("Listing stations")
+            df_ws = self.list_ws(path_resampling,path_daily_data)
+            print("Listed stations")
 
-            if errors > 0:
-                print("WARNING: Stations with problems",df_ws.loc[df_ws["message"].isna() == False,:])
-
-            df_data = pd.DataFrame()
-
-            print("Extracting CHIRPS data")
-            df_data_chirps = self.extract_chirp_data(path_daily_downloaded,df_ws)
-            print("Extracted CHIRPS data")
+            print("Extracting CHIRP data")
+            df_data_chirp = self.extract_chirp_data(path_daily_downloaded,df_ws)
+            print("Extracted CHIRP data")
 
             print("Extracting ERA 5 data")
             df_data_era5 = self.extract_era5_data(path_daily_downloaded,df_ws)
             print("Extracted ERA 5 data")
 
             print("Merging CHIRPS and ERA 5")
-            df_data = pd.merge(df_data_chirps,df_data_era5,how='outer',on=['ws','day','month','year'])
+            df_data = pd.DataFrame()
+            df_data = pd.merge(df_data_chirp,df_data_era5,how='outer',on=['ws','day','month','year'])
             print("Merged CHIRPS and ERA 5")
 
             ########### Code to validate

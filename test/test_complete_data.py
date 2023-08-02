@@ -19,25 +19,33 @@ class TestCompleteData(unittest.TestCase):
         self.start_date = datetime(2023, 6, 1)
         self.end_date = datetime(2023, 6, 3)  # Only 3 days for this test
         self.cores = 2
+        self.data = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
         self.root_data = os.path.abspath(os.path.join(os.path.dirname(__file__), 'test_files'))
         self.country = 'ETHIOPIA'
         self.chirps_url_name = f"chirp.{self.start_date.strftime('%Y.%m.%d')}.tif.gz"
         self.chirps_file_name = f"chirp.{self.start_date.strftime('%Y.%m.%d')}.tif"
-        self.inputs_prediccion = os.path.join(self.root_data,self.country,"inputs","prediccionClimatica")
+        self.inputs = os.path.join(self.root_data,self.country,"inputs")
+        self.outputs = os.path.join(self.root_data,self.country,"outputs")
+        self.inputs_prediccion = os.path.join(self.inputs,"prediccionClimatica")
         self.daily_downloaded_path = os.path.join(self.inputs_prediccion, "daily_downloaded")
+        self.daily_data_path = os.path.join(self.inputs_prediccion, "dailyData")
         self.chirps_path = os.path.join(self.daily_downloaded_path, "chirps")
         self.chirps_file_path = os.path.join(self.chirps_path, self.chirps_file_name)
         self.chirps_file_path_compressed = os.path.join(self.chirps_path, self.chirps_url_name)
         self.url = f"http://data.chc.ucsb.edu/products/CHIRP/daily/{str(self.start_date.year)}/{self.chirps_url_name}"
         self.era5_path = os.path.join(self.daily_downloaded_path, "era5")
-        self.data = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+        self.outputs_resampling = os.path.join(self.outputs,"resampling")
         self.variable_era5 = "t_max"
         self.chirp_data = "chirp.2023.06.01.tif"
         self.era5_data = "Temperature-Air-2m-Max-24h_C3S-glob-agric_AgERA5_20230601_final-v1.0.tif"
         self.location = pd.DataFrame({'ws': ['Test Location'], 'lat': [6.4095], 'lon': [-72.0211]})
         self.locations = pd.DataFrame({ 'ws': ['Location 1', 'Location 2'], 'lat': [6.4095, 6.3830], 'lon': [-72.0211, -71.8700]})
+        self.locations = pd.DataFrame({ 'ws': ['Location 1', 'Location 2'], 'lat': [6.4095, 6.3830], 'lon': [-72.0211, -71.8700]})
+        os.makedirs(self.daily_data_path, exist_ok=True)
         os.makedirs(self.chirps_path, exist_ok=True)
         os.makedirs(os.path.join(self.era5_path,self.variable_era5), exist_ok=True)
+        shutil.copy(os.path.join(self.data,"inputs"),self.inputs)
+        shutil.copy(os.path.join(self.data,"outputs"),self.outputs_resampling)
 
         # Leap year
         self.start_date_leapyear = datetime(2020, 2, 1)
@@ -172,6 +180,7 @@ class TestCompleteData(unittest.TestCase):
         
         transformed_files = glob.glob(os.path.join(self.chirps_path, '*.tif'))
         self.assertEqual(len(transformed_files), 29)  # 29 days of data downloaded for each variable
+
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD ERA 5
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -220,6 +229,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST EXTRACT VALUES
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
     def test_extract_values_single_file_single_location_chirp(self):
         variable = 'prec'
         # Test extracting values for a single file and a single location
@@ -348,19 +358,61 @@ class TestCompleteData(unittest.TestCase):
         pd.testing.assert_frame_equal(extracted_data, expected_data)
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
+    # TEST LIST WEATHER STATION
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    def test_list_ws_single_station(self):
+        # Test listing stations with a single valid station
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Perform listing of stations
+        df_ws = complete_data.list_ws(self.outputs_resampling, self.daily_data_path)
+
+        # Create a mock coordinates file for a single station
+        ws_name = '5e91e1c214daf81260ebba59'
+        lat = 12.79
+        lon = 39.65
+
+        # Check if the station information is correctly listed
+        expected_data = pd.DataFrame({
+            'ws': [ws_name],
+            'lat': [lat],
+            'lon': [lon],
+            'message': ['']
+        })
+        pd.testing.assert_frame_equal(df_ws, expected_data)
+
+    def test_list_ws_multiple_stations(self):
+        # Test listing stations with multiple stations and some stations having errors
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Create mock coordinates files for multiple stations, but one station with a missing coordinates file
+        ws_names = ['Station1', 'Station2', 'Station3']
+        lats = [40.0, 41.0, 42.0]
+        lons = [-120.0, -121.0, -122.0]
+        for ws_name, lat, lon in zip(ws_names, lats, lons):
+            self.create_mock_coordinates_file(ws_name, lat, lon)
+        # One station (Station4) is missing the coordinates file
+
+        # Perform listing of stations
+        df_ws = complete_data.list_ws(os.path.join(self.test_path, "resampling"), os.path.join(self.test_path, "daily"))
+
+        # Check if the station information is correctly listed, and the station with an error is detected
+        expected_data = pd.DataFrame({
+            'ws': ws_names + ['Station4'],
+            'lat': lats + [None],
+            'lon': lons + [None],
+            'message': ['', '', '', 'ERROR with coordinates']
+        })
+        pd.testing.assert_frame_equal(df_ws, expected_data)
+
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-
     # TEST EXTRACT CLIMATOLOGY
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
-    def create_mock_climatology_data(self, location_name, data):
-        # Create a mock climatology data file for testing
-        file_path = os.path.join(self.test_path, f"{location_name}.csv")
-        data.to_csv(file_path, index=False)
 
     def test_extract_climatology_single_location(self):
         # Test extracting climatology for a single location
-        start_date = datetime.datetime(2023, 7, 1)
-        country = 'US'
-        path = self.test_path
-        complete_data = CompleteData(start_date=start_date, country=country, path=path, cores=1, force=False)
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
 
         # Create a mock climatology data file for a single location
         location_name = 'Location 1'
@@ -384,7 +436,7 @@ class TestCompleteData(unittest.TestCase):
         })
 
         # Perform the extraction
-        extracted_data = complete_data.extract_climatology(path, locations)
+        extracted_data = complete_data.extract_climatology(self.daily_downloaded_path, locations)
 
         # Check if the extracted data is correct
         expected_data = data.loc[data['month'] == 7].copy()
