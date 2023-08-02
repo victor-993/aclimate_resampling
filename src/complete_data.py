@@ -337,9 +337,9 @@ class CompleteData():
         path_inputs = os.path.join(path_country,"inputs")
         path_outputs = os.path.join(path_country,"outputs")
         path_daily = os.path.join(path_inputs,"prediccionClimatica","dailyData")
-        path_resampling = os.path.join(path_outputs,"prediccionClimatica","resampling")
         path_daily_data = os.path.join(path_inputs,"prediccionClimatica","dailyData") # It is not included because we will create after
         path_daily_downloaded = os.path.join(path_inputs,"prediccionClimatica","daily_downloaded") # It is not included because we will create after
+        path_resampling = os.path.join(path_outputs,"prediccionClimatica","resampling")
 
         folders = [path_country,path_inputs,path_outputs,path_daily,path_resampling]
         missing_files = []
