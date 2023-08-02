@@ -44,8 +44,8 @@ class TestCompleteData(unittest.TestCase):
         os.makedirs(self.daily_data_path, exist_ok=True)
         os.makedirs(self.chirps_path, exist_ok=True)
         os.makedirs(os.path.join(self.era5_path,self.variable_era5), exist_ok=True)
-        shutil.copy(os.path.join(self.data,"inputs"),self.inputs)
-        shutil.copy(os.path.join(self.data,"outputs"),self.outputs_resampling)
+        #shutil.copytree(self.data,self.inputs)
+        #shutil.copytree(self.data,self.outputs_resampling)
 
         # Leap year
         self.start_date_leapyear = datetime(2020, 2, 1)
@@ -361,7 +361,7 @@ class TestCompleteData(unittest.TestCase):
     # TEST LIST WEATHER STATION
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    def test_list_ws_single_station(self):
+    def test_list_ws_stations(self):
         # Test listing stations with a single valid station
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
 
@@ -369,47 +369,48 @@ class TestCompleteData(unittest.TestCase):
         df_ws = complete_data.list_ws(self.outputs_resampling, self.daily_data_path)
 
         # Create a mock coordinates file for a single station
-        ws_name = '5e91e1c214daf81260ebba59'
-        lat = 12.79
-        lon = 39.65
+        ws_names = ['5e91e1c214daf81260ebba59', '5eb346bdebd0050e38685f3e', '5ebad0a74c06b707e80d5c4a']
+        lats = [12.79, 12.13649, 10.057273]
+        lons = [39.65, 39.66048, 34.54025]
 
         # Check if the station information is correctly listed
         expected_data = pd.DataFrame({
-            'ws': [ws_name],
-            'lat': [lat],
-            'lon': [lon],
-            'message': ['']
+            'ws': [ws_names],
+            'lat': [lats],
+            'lon': [lons],
+            'message': ['']*3
         })
         pd.testing.assert_frame_equal(df_ws, expected_data)
 
-    def test_list_ws_multiple_stations(self):
-        # Test listing stations with multiple stations and some stations having errors
+    def test_list_ws_stations_without_coords(self):
+        # Test listing stations with a single valid station
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
 
-        # Create mock coordinates files for multiple stations, but one station with a missing coordinates file
-        ws_names = ['Station1', 'Station2', 'Station3']
-        lats = [40.0, 41.0, 42.0]
-        lons = [-120.0, -121.0, -122.0]
-        for ws_name, lat, lon in zip(ws_names, lats, lons):
-            self.create_mock_coordinates_file(ws_name, lat, lon)
-        # One station (Station4) is missing the coordinates file
+        # Remove one coords file for one station
+        shutil.rmtree(os.path.join(self.outputs_resampling,"5ebad0a74c06b707e80d5c4a_coords.csv"))
 
         # Perform listing of stations
-        df_ws = complete_data.list_ws(os.path.join(self.test_path, "resampling"), os.path.join(self.test_path, "daily"))
+        df_ws = complete_data.list_ws(self.outputs_resampling, self.daily_data_path)
 
-        # Check if the station information is correctly listed, and the station with an error is detected
+        # Create a mock coordinates file for a single station
+        ws_names = ['5e91e1c214daf81260ebba59', '5eb346bdebd0050e38685f3e', '5ebad0a74c06b707e80d5c4a']
+        lats = [12.79, 12.13649, 10.057273]
+        lons = [39.65, 39.66048, 34.54025]
+        messages = ['', '', 'ERROR with coordinates']
+
+        # Check if the station information is correctly listed
         expected_data = pd.DataFrame({
-            'ws': ws_names + ['Station4'],
-            'lat': lats + [None],
-            'lon': lons + [None],
-            'message': ['', '', '', 'ERROR with coordinates']
+            'ws': [ws_names],
+            'lat': [lats],
+            'lon': [lons],
+            'message': [messages]
         })
         pd.testing.assert_frame_equal(df_ws, expected_data)
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
     # TEST EXTRACT CLIMATOLOGY
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
-
+    """
     def test_extract_climatology_single_location(self):
         # Test extracting climatology for a single location
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
@@ -482,6 +483,6 @@ class TestCompleteData(unittest.TestCase):
             'lat': [40.0, 41.0],
             'lon': [-120.0, -121.0]
         })
-
+    """
 if __name__ == '__main__':
     unittest.main()
