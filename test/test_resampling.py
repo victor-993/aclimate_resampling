@@ -2,11 +2,14 @@
 import unittest
 import pandas as pd
 import os
+import sys
 import numpy as np
 
-from funciones_aclimate import preprocessing, forecast_station, save_forecast
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-class TestAClimateResampling(unittest.TestCase):
+from src.resampling import Resampling
+
+class TestResampling(unittest.TestCase):
     def setUp(self):
         # Define sample input data for testing
         self.station = "62a74f9bea81f11fe450cbc4"

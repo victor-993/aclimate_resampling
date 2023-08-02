@@ -62,14 +62,14 @@ class TestCompleteData(unittest.TestCase):
         era5_dst = os.path.join(self.era5_path,self.variable_era5,self.era5_data)
 
         with ZipFile(chirp_src + ".zip", 'r') as zObject:
-            zObject.extractall(path=chirp_src)
+            zObject.extractall(path=self.data)
         with ZipFile(era5_src + ".zip", 'r') as zObject:
-            zObject.extractall(path=era5_src)
+            zObject.extractall(path=self.data)
 
         if not(os.path.exists(chirp_dst)):
-            shutil.copyfile(chirp_src, chirp_dst)
+            shutil.move(chirp_src, chirp_dst)
         if not(os.path.exists(era5_src)):
-            shutil.copyfile(era5_src, era5_dst)
+            shutil.move(era5_src, era5_dst)
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD FILE
