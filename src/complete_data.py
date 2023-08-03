@@ -193,8 +193,6 @@ class CompleteData():
         for file in tqdm(files,desc="Extracting " + var):
             file_path = os.path.join(dir_path, file)
             with rasterio.open(file_path) as src:
-                #print(src.crs)
-                #transform = src.transform
                 # Loop for each location
                 for index,location in locations.iterrows():
                     #col, row = ~transform * (location['lon'], location['lat'])
@@ -311,10 +309,10 @@ class CompleteData():
         df_ws = pd.DataFrame(columns=["ws","lat","lon","message"])
         df_ws["ws"] =[w.split(os.path.sep)[-1] for w in glob.glob(os.path.join(resampling_path, '*'))]
         for index,row in df_ws.iterrows():
-            try:
+            if os.path.exists(os.path.join(daily_path,row["ws"] + "_coords.csv")):
                 df_tmp = pd.read_csv(os.path.join(daily_path,row["ws"] + "_coords.csv"))
                 df_ws.at[index,"lat"],df_ws.at[index,"lon"] = df_tmp.at[0,"lat"],df_tmp.at[0,"lon"]
-            except Exception:
+            else:
                 errors += 1
                 df_ws.at[index,"message"] = "ERROR with coordinates"
         if errors > 0:

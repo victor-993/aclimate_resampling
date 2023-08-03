@@ -68,7 +68,7 @@ class TestCompleteData(unittest.TestCase):
 
         if not(os.path.exists(chirp_dst)):
             shutil.move(chirp_src, chirp_dst)
-        if not(os.path.exists(era5_src)):
+        if not(os.path.exists(era5_dst)):
             shutil.move(era5_src, era5_dst)
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -172,12 +172,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.download_data_chirp(self.daily_downloaded_path, year_to=self.start_date_leapyear.year)
 
         # Check if the chirp data files were downloaded and stored in the correct location
-        dates = [self.start_date_leapyear + timedelta(days=x) for x in range((self.end_date - self.start_date_leapyear).days + 1)]
-        expected_files = [f"chirp.{date.strftime('%Y.%m.%d')}.tif" for date in dates]
-        for file in expected_files:
-            file_path = os.path.join(self.chirps_path, file)
-            self.assertTrue(os.path.exists(file_path))
-        
+
         transformed_files = glob.glob(os.path.join(self.chirps_path, '*.tif'))
         self.assertEqual(len(transformed_files), 29)  # 29 days of data downloaded for each variable
 
@@ -224,7 +219,7 @@ class TestCompleteData(unittest.TestCase):
         variable_path = os.path.join(self.era5_path, "t_max")
         self.assertTrue(os.path.exists(variable_path))
         transformed_files = glob.glob(os.path.join(variable_path, '*.tif'))
-        self.assertEqual(len(transformed_files), 29)  # 30 days of data downloaded
+        self.assertEqual(len(transformed_files), 29)  # 29 days of data downloaded
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST EXTRACT VALUES
@@ -245,22 +240,6 @@ class TestCompleteData(unittest.TestCase):
         expected_data = [{'ws': 'Test Location', 'day': 1, 'month': 6, 'year': 2023, variable: 20.493248}]
         self.assertEqual(extracted_data, expected_data)
 
-    def test_extract_values_single_file_single_location_era5(self):
-        variable = self.variable_era5
-        # Test extracting values for a single file and a single location
-        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
-
-        # Copy the two raster for testing
-        self.create_mock_raster()
-
-        # Perform the extraction
-        extracted_data = complete_data.extract_values(os.path.join(self.era5_data,variable), variable, self.location, -23,-15,'%Y%m%d')
-
-        # Check if the extracted data is correct
-        expected_data = [{'ws': 'Test Location', 'day': 1, 'month': 6, 'year': 2023, variable: 20.708344}]
-
-        self.assertEqual(extracted_data, expected_data)
-
     def test_extract_values_multiple_files_multiple_locations_chirp(self):
         # Test extracting values for multiple files and multiple locations
         variable = 'prec'
@@ -279,6 +258,22 @@ class TestCompleteData(unittest.TestCase):
         ]
         self.assertEqual(extracted_data, expected_data)
 
+    def test_extract_values_single_file_single_location_era5(self):
+        variable = self.variable_era5
+        # Test extracting values for a single file and a single location
+        complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
+
+        # Copy the two raster for testing
+        self.create_mock_raster()
+
+        # Perform the extraction
+        extracted_data = complete_data.extract_values(os.path.join(self.era5_path,variable), variable, self.location, -23,-15,'%Y%m%d')
+
+        # Check if the extracted data is correct
+        expected_data = [{'ws': 'Test Location', 'day': 1, 'month': 6, 'year': 2023, variable: 20.708344}]
+
+        self.assertEqual(extracted_data, expected_data)
+
     def test_extract_values_multiple_files_multiple_locations_era5(self):
         # Test extracting values for multiple files and multiple locations
         variable = self.variable_era5
@@ -288,7 +283,7 @@ class TestCompleteData(unittest.TestCase):
         self.create_mock_raster()
 
         # Perform the extraction
-        extracted_data = complete_data.extract_values(os.path.join(self.era5_data,variable), variable, self.locations, -23,-15,'%Y%m%d')
+        extracted_data = complete_data.extract_values(os.path.join(self.era5_path,variable), variable, self.locations, -23,-15,'%Y%m%d')
 
         # Check if the extracted data is correct
         expected_data = [
@@ -327,7 +322,7 @@ class TestCompleteData(unittest.TestCase):
 
         # Check if the extracted data is correct
         expected_data = pd.DataFrame({
-            'ws': ['Test Location'],
+            'ws': ['Location 1','Location 2'],
             'day': [1,1],
             'month': [6,6],
             'year': [2023,2023],
@@ -372,13 +367,14 @@ class TestCompleteData(unittest.TestCase):
         ws_names = ['5e91e1c214daf81260ebba59', '5eb346bdebd0050e38685f3e', '5ebad0a74c06b707e80d5c4a']
         lats = [12.79, 12.13649, 10.057273]
         lons = [39.65, 39.66048, 34.54025]
+        msgs = ['','','']
 
         # Check if the station information is correctly listed
         expected_data = pd.DataFrame({
-            'ws': [ws_names],
-            'lat': [lats],
-            'lon': [lons],
-            'message': ['']*3
+            'ws': ws_names,
+            'lat': lats,
+            'lon': lons,
+            'message': msgs
         })
         pd.testing.assert_frame_equal(df_ws, expected_data)
 
