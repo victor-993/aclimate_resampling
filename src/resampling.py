@@ -15,6 +15,7 @@ if __name__ == "__main__":
     # 1: Path root
     # 2: Previous months
     # 3: Cores
+    # 4: Year of forecast
     parameters = sys.argv[2:]
     print("Reading inputs")
     #country = "ETHIOPIA"
