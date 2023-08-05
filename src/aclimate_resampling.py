@@ -27,9 +27,9 @@ if __name__ == "__main__":
     start_date = (datetime.date.today() - pd.DateOffset(months=months_previous)).replace(day=1)
     cores = int(parameters[3])
     
-    ar = AClimateResampling(path, country, cores=cores, year_forecast = parameters[4])
-    ar.resampling_master()
+    ar = AClimateResampling(path, country, cores=cores, year_forecast = int(parameters[4]))
+    ar.resampling()
     dd = CompleteData(start_date,country,path,cores=cores)
     dd.run()
 
-#python resampling.py "ETHIOPIA" "D:\\CIAT\\Code\\USAID\\aclimate_resampling\\data\\" "-1" 2
+#python resampling.py "ETHIOPIA" "D:\\CIAT\\Code\\USAID\\aclimate_resampling\\data\\" "-1" 2 2023
