@@ -157,8 +157,8 @@ class CompleteData():
                 print("\tFiles already extracted!",save_path_era5_data_tmp)
 
             if self.force or len(os.listdir(save_path_era5_data)) == 0:
-                print("\tSetting CRS",save_path_era5_data_tmp)
                 tmp_files = glob.glob(os.path.join(save_path_era5_data_tmp, '*'))
+                print("\tSetting CRS",save_path_era5_data_tmp,len(tmp_files))
                 for file in tqdm(tmp_files,desc="nc to raster and setting new CRS " + v):
                     input_file = file
                     output_file = os.path.join(save_path_era5_data,file.split(os.path.sep)[-1].replace(".nc",".tif"))
@@ -236,6 +236,8 @@ class CompleteData():
                 df = df_tmp.copy()
             else:
                 df = pd.merge(df,df_tmp,how='left',on=['ws','day','month','year'])
+        #print(df.loc[df["day"] == 1,:].head())
+        #print(df.head())
         return df
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -301,7 +303,7 @@ class CompleteData():
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to list all weather stations
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # resampling_path:  path where the climate scenarios are
+    # resampling_path:  path where the climate scenarios were saved
     # daily_path: path where the daily data
     # OUTPUT: Dataframe with a list of all weather stations
     def list_ws(self, resampling_path, daily_path):
