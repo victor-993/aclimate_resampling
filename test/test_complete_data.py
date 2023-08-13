@@ -41,10 +41,15 @@ class TestCompleteData(unittest.TestCase):
         self.era5_data = "Temperature-Air-2m-Max-24h_C3S-glob-agric_AgERA5_20230601_final-v1.0.tif"
         self.location = pd.DataFrame({'ws': ['Test Location'], 'lat': [6.4095], 'lon': [-72.0211]})
         self.locations = pd.DataFrame({ 'ws': ['Location 1', 'Location 2'], 'lat': [6.4095, 6.3830], 'lon': [-72.0211, -71.8700]})
-        os.makedirs(self.daily_data_path, exist_ok=True)
+        os.makedirs(self.inputs_prediccion, exist_ok=True)
         os.makedirs(self.chirps_path, exist_ok=True)
+        #os.makedirs(self.outputs, exist_ok=True)
+
         os.makedirs(os.path.join(self.era5_path,self.variable_era5), exist_ok=True)
-        shutil.copytree(os.path.join(self.data,"inputs","prediccionClimatica","dailyData","*.csv"),self.daily_data_path) ################ Aqui hay que mover los directorios
+        if not os.listdir(self.daily_data_path):
+            shutil.copytree(os.path.join(self.data,"inputs","prediccionClimatica","dailyData"),self.daily_data_path, ignore=shutil.ignore_patterns('*'))
+        if not os.listdir(self.outputs_resampling):
+            shutil.copytree(os.path.join(self.data,"outputs"),self.outputs, ignore=shutil.ignore_patterns('*'))
         #shutil.copytree(self.data,self.inputs)
         #shutil.copytree(self.data,self.outputs_resampling)
 
@@ -380,6 +385,9 @@ class TestCompleteData(unittest.TestCase):
             'lon': lons,
             'message': msgs
         })
+        expected_data["ws"] = expected_data["ws"].astype('string')
+        expected_data["message"] = expected_data["message"].astype('string')
+
         pd.testing.assert_frame_equal(df_ws, expected_data)
 
     def test_list_ws_stations_without_coords(self):
@@ -387,8 +395,8 @@ class TestCompleteData(unittest.TestCase):
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
 
         # Remove one coords file for one station
-        if os.path.exists(os.path.join(self.outputs_resampling,"5ebad0a74c06b707e80d5c4a_coords.csv")):
-            shutil.rmtree(os.path.join(self.outputs_resampling,"5ebad0a74c06b707e80d5c4a_coords.csv"))
+        if os.path.exists(os.path.join(self.daily_data_path,"5ebad0a74c06b707e80d5c4a_coords.csv")):
+            shutil.rmtree(os.path.join(self.daily_data_path,"5ebad0a74c06b707e80d5c4a_coords.csv"))
 
         # Perform listing of stations
         df_ws = complete_data.list_ws(self.outputs_resampling, self.daily_data_path)
@@ -406,6 +414,9 @@ class TestCompleteData(unittest.TestCase):
             'lon': [lons],
             'message': [messages]
         })
+        expected_data["ws"] = expected_data["ws"].astype('string')
+        expected_data["message"] = expected_data["message"].astype('string')
+
         pd.testing.assert_frame_equal(df_ws, expected_data)
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-

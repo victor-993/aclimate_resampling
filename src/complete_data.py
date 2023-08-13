@@ -313,12 +313,16 @@ class CompleteData():
         for index,row in df_ws.iterrows():
             if os.path.exists(os.path.join(daily_path,row["ws"] + "_coords.csv")):
                 df_tmp = pd.read_csv(os.path.join(daily_path,row["ws"] + "_coords.csv"))
-                df_ws.at[index,"lat"],df_ws.at[index,"lon"] = df_tmp.at[0,"lat"],df_tmp.at[0,"lon"]
+                df_ws.at[index,"lat"],df_ws.at[index,"lon"],df_ws.at[index,"message"] = df_tmp.at[0,"lat"],df_tmp.at[0,"lon"],""
             else:
                 errors += 1
                 df_ws.at[index,"message"] = "ERROR with coordinates"
         if errors > 0:
             print("WARNING: Stations with problems",df_ws.loc[df_ws["message"].isna() == False,:])
+        df_ws["ws"] = df_ws["ws"].astype('string')
+        df_ws["lat"] = df_ws["lat"].astype('float64')
+        df_ws["lon"] = df_ws["lon"].astype('float64')
+        df_ws["message"] = df_ws["message"].astype('string')
         return df_ws
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
