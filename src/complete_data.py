@@ -293,8 +293,6 @@ class CompleteData():
                 df = df_tmp.copy()
             else:
                 df = pd.merge(df,df_tmp,how='left',on=['ws','day','month','year'])
-        #print(df.loc[df["day"] == 1,:].head())
-        #print(df.head())
         return df
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -355,28 +353,25 @@ class CompleteData():
                 #
                 #df_data = df_data.append(df_tmp,ignore_index=True)
                 df_data = pd.concat([df_data,df_tmp], ignore_index=True)
+                df_data = df_data[cols_total]
                 df_data.to_csv(f,index=False)
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to runs all process
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     def run(self):
-        # Prepare enviroment
         print("Preparing enviroment")
         self.prepare_env()
         print("Env prepared")
 
-        # Final list of stations to be processed
         print("Listing stations")
         df_ws = self.list_ws()
         print("Listed stations")
 
-        # Download Chirps data
         print("CHIRPS data started!")
         self.download_data_chirp()
         print("CHIRPS data downloaded!")
 
-        # Download ERA 5 data
         print("ERA 5 data started!")
         self.download_era5_data()
         print("ERA 5 data downloaded!")
