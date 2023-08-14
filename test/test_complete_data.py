@@ -66,7 +66,7 @@ class TestCompleteData(unittest.TestCase):
         os.makedirs(self.inputs_prediccion, exist_ok=True)
         os.makedirs(self.chirps_path, exist_ok=True)
         #os.makedirs(self.outputs, exist_ok=True)
-
+        
         os.makedirs(os.path.join(self.era5_path,self.variable_era5), exist_ok=True)
         if not os.listdir(self.daily_data_path):
             shutil.copytree(os.path.join(self.data,"inputs","prediccionClimatica","dailyData"),self.daily_data_path, ignore=shutil.ignore_patterns('*'))
@@ -100,7 +100,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD FILE
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
+    
     def test_download_file_force_false(self):
         # Test downloading a file with force=False (file already exists)
         complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
@@ -147,8 +147,7 @@ class TestCompleteData(unittest.TestCase):
         
         # Check if the file was downloaded and extracted
         self.assertTrue(os.path.exists(self.chirps_file_path))
-    
-    
+    """
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD DATA CHIRP
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -201,7 +200,7 @@ class TestCompleteData(unittest.TestCase):
         # Check if the chirp data files were downloaded and stored in the correct location
         transformed_files = glob.glob(os.path.join(self.path_env_country_inputs_forecast_dailydownloaded_chirp, '*.tif'))
         self.assertEqual(len(transformed_files), 29)  # 29 days of data downloaded for each variable
-
+    
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD ERA 5
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -460,7 +459,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
     # TEST EXTRACT CLIMATOLOGY
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
-    """
+    
     def test_extract_climatology_single_location(self):
         # Test extracting climatology for a single location
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)

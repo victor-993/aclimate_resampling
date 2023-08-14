@@ -120,13 +120,13 @@ class CompleteData():
             print("\tFile already downloaded!",path)
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # Function to download chirps data
+    # Function to download chirp data
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # OUTPUT: save rasters layers.
     def download_data_chirp(self):
         save_path = self.path_country_inputs_forecast_dailydownloaded
         # Create folder for data
-        save_path_chirp = os.path.join(save_path,"chirps")
+        save_path_chirp = os.path.join(save_path,"chirp")
         self.manager.mkdir(save_path_chirp)
 
         # Calculate dates to download data
@@ -271,7 +271,7 @@ class CompleteData():
     # OUTPUT: This return resampling scenaries join with satellite data.
     def extract_chirp_data(self,locations):
         save_path = self.path_country_inputs_forecast_dailydownloaded
-        dir_path = os.path.join(save_path,"chirps")
+        dir_path = os.path.join(save_path,"chirp")
         data = self.extract_values(dir_path,'prec',locations,-14,-4,'%Y.%m.%d')
         df = pd.DataFrame(data)
         return df
