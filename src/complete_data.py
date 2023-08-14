@@ -35,6 +35,68 @@ class CompleteData():
         self.force = force
         self.end_date = (self.start_date + pd.DateOffset(months=1)) - pd.DateOffset(days=1)
         self.manager = DirectoryManager()
+        self.path_country = ""
+        self.path_country_inputs = ""
+        self.path_country_inputs_forecast = ""
+        self.path_country_inputs_forecast_dailydata = ""
+        self.path_country_inputs_forecast_dailydownloaded = ""
+        self.path_country_outputs = ""
+        self.path_country_outputs_resampling = ""
+
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # Function to prepare and validate the enviroment
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    def prepare_env(self):
+        # Creating paths
+        self.path_country = os.path.join(self.path,self.country)
+
+        self.path_country_inputs = os.path.join(self.path_country,"inputs")
+        self.path_country_inputs_forecast = os.path.join(self.path_country_inputs,"prediccionClimatica")
+        self.path_country_inputs_forecast_dailydata = os.path.join(self.path_country_inputs_forecast,"dailyData")
+        self.path_country_inputs_forecast_dailydownloaded = os.path.join(self.path_country_inputs_forecast,"daily_downloaded")
+
+        self.path_country_outputs = os.path.join(self.path_country,"outputs")
+        self.path_country_outputs_resampling = os.path.join(self.path_country_outputs,"resampling")
+
+        print("Validating folders needed")
+        folders = [self.path_country,self.path_country_inputs,self.path_country_inputs_forecast,
+                   self.path_country_inputs_forecast_dailydata,self.path_country_outputs,self.path_country_outputs_resampling]
+        missing_files = ""
+        missing_count = 0
+
+        for folder in folders:
+            if not os.path.exists(folder):
+                missing_files = missing_files + ","
+                missing_count += 1
+
+        if missing_count > 0:
+            raise ValueError("ERROR Directories don't exist (" + str(missing_count) + "): " + missing_files)
+
+        self.manager.mkdir(self.path_country_inputs_forecast_dailydownloaded)
+        print("Init:",self.start_date,"End:",self.end_date,"Year:",self.start_date.year,"Month:",self.start_date.month)
+
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # Function to list all weather stations
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # OUTPUT: Dataframe with a list of all weather stations
+    def list_ws(self):
+        errors = 0
+        df_ws = pd.DataFrame(columns=["ws","lat","lon","message"])
+        df_ws["ws"] =[w.split(os.path.sep)[-1] for w in glob.glob(os.path.join(self.path_country_outputs_resampling, '*'))]
+        for index,row in df_ws.iterrows():
+            if os.path.exists(os.path.join(self.path_country_inputs_forecast_dailydata,row["ws"] + "_coords.csv")):
+                df_tmp = pd.read_csv(os.path.join(self.path_country_inputs_forecast_dailydata,row["ws"] + "_coords.csv"))
+                df_ws.at[index,"lat"],df_ws.at[index,"lon"],df_ws.at[index,"message"] = df_tmp.at[0,"lat"],df_tmp.at[0,"lon"],""
+            else:
+                errors += 1
+                df_ws.at[index,"message"] = "ERROR with coordinates"
+        if errors > 0:
+            print("WARNING: Stations with problems",df_ws.loc[df_ws["message"].isna() == False,:])
+        df_ws["ws"] = df_ws["ws"].astype('string')
+        df_ws["lat"] = df_ws["lat"].astype('float64')
+        df_ws["lon"] = df_ws["lon"].astype('float64')
+        df_ws["message"] = df_ws["message"].astype('string')
+        return df_ws
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to download data
@@ -60,12 +122,9 @@ class CompleteData():
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to download chirps data
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # save_path: path to save raster files.
-    # year_to: resampling year.
-    # cores: # cores to use in parallel.
-    # force: If you want to force to execute the process
     # OUTPUT: save rasters layers.
-    def download_data_chirp(self,save_path, year_to):
+    def download_data_chirp(self):
+        save_path = self.path_country_inputs_forecast_dailydownloaded
         # Create folder for data
         save_path_chirp = os.path.join(save_path,"chirps")
         self.manager.mkdir(save_path_chirp)
@@ -74,7 +133,7 @@ class CompleteData():
         dates = [self.start_date + timedelta(days=x) for x in range((self.end_date - self.start_date).days + 1)]
 
         # Creating a list of all files that should be downloaded
-        urls = [f"http://data.chc.ucsb.edu/products/CHIRP/daily/{year_to}/chirp.{date.strftime('%Y.%m.%d')}.tif.gz" for date in dates]
+        urls = [f"http://data.chc.ucsb.edu/products/CHIRP/daily/{self.start_date.year}/chirp.{date.strftime('%Y.%m.%d')}.tif.gz" for date in dates]
         files = [os.path.basename(url) for url in urls]
         save_path_chirp_all = [os.path.join(save_path_chirp, file) for file in files]
         force_all = [self.force] * len(files)
@@ -86,11 +145,9 @@ class CompleteData():
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to download ERA 5 data
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # save_path: path to save raster files.
     # variables: List of variables to download. by default
-    # force: If you want to force to execute the process
     # OUTPUT: save rasters layers.
-    def download_era5_data(self,save_path, variables=["t_max","t_min","sol_rad"]):
+    def download_era5_data(self,variables=["t_max","t_min","sol_rad"]):
         new_crs = '+proj=longlat +datum=WGS84 +no_defs'
         # Define the variables classes and their parameters for the CDSAPI
         enum_variables ={
@@ -109,6 +166,7 @@ class CompleteData():
                         }
 
         # Create folder for data
+        save_path = self.path_country_inputs_forecast_dailydownloaded
         save_path_era5 = os.path.join(save_path,"era5")
         self.manager.mkdir(save_path_era5)
 
@@ -134,8 +192,6 @@ class CompleteData():
                         'format': 'zip',
                         'variable': enum_variables[v]["name"],
                         'statistic': enum_variables[v]["statistics"],
-                        # area:  North, West, South, East
-                        #'area': f'{self.region[0]}/{self.region[1]}/{self.region[2]}/{self.region[3]}',
                         'year': year,
                         'month': month,
                         'day': days,
@@ -211,10 +267,10 @@ class CompleteData():
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to extract Chirp data
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # save_path:  rasters path
     # locations: Dataframe with coordinates for each location that we want to extract.
     # OUTPUT: This return resampling scenaries join with satellite data.
-    def extract_chirp_data(self,save_path, locations):
+    def extract_chirp_data(self,locations):
+        save_path = self.path_country_inputs_forecast_dailydownloaded
         dir_path = os.path.join(save_path,"chirps")
         data = self.extract_values(dir_path,'prec',locations,-14,-4,'%Y.%m.%d')
         df = pd.DataFrame(data)
@@ -223,11 +279,11 @@ class CompleteData():
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to extract ERA 5 data
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # save_path:  rasters path
     # locations: Dataframe with coordinates for each location that we want to extract.
     # variables: List of variables to be extracted. by default
     # OUTPUT: This return resampling scenaries join with satellite data.
-    def extract_era5_data(self,save_path, locations,variables=["t_max","t_min","sol_rad"]):
+    def extract_era5_data(self,locations,variables=["t_max","t_min","sol_rad"]):
+        save_path = self.path_country_inputs_forecast_dailydownloaded
         df = pd.DataFrame()
         for v in variables:
             dir_path = os.path.join(save_path,"era5",v)
@@ -244,10 +300,10 @@ class CompleteData():
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to generate climatology from historical data
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # save_path:  daily data (historical)
     # locations: Dataframe with coordinates for each location that we want to extract.
     # OUTPUT: This return climatology
-    def extract_climatology(self,save_path,locations):
+    def extract_climatology(self,locations):
+        save_path = self.path_country_inputs_forecast_dailydata
         df = pd.DataFrame()
         # Loop for each location
         for index,location in tqdm(locations.iterrows(),total=locations.shape[0],desc="Calculating climatology"):
@@ -275,10 +331,10 @@ class CompleteData():
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to write the outputs
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # save_path:  Resampling output path
     # locations: Dataframe with coordinates for each location that we want to extract.
     # data: Dataframe with months generate
-    def write_outputs(self,save_path,locations,data,climatology,variables=['prec','t_max','t_min','sol_rad']):
+    def write_outputs(self,locations,data,climatology,variables=['prec','t_max','t_min','sol_rad']):
+        save_path = self.path_country_outputs_resampling
         cols_date = ['day','month','year']
         cols_total = cols_date + variables
         for index,location in tqdm(locations.iterrows(),total=locations.shape[0],desc="Writing scenarios"):
@@ -301,97 +357,47 @@ class CompleteData():
                 df_data = pd.concat([df_data,df_tmp], ignore_index=True)
                 df_data.to_csv(f,index=False)
 
-    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # Function to list all weather stations
-    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    # resampling_path:  path where the climate scenarios were saved
-    # daily_path: path where the daily data
-    # OUTPUT: Dataframe with a list of all weather stations
-    def list_ws(self, resampling_path, daily_path):
-        errors = 0
-        df_ws = pd.DataFrame(columns=["ws","lat","lon","message"])
-        df_ws["ws"] =[w.split(os.path.sep)[-1] for w in glob.glob(os.path.join(resampling_path, '*'))]
-        for index,row in df_ws.iterrows():
-            if os.path.exists(os.path.join(daily_path,row["ws"] + "_coords.csv")):
-                df_tmp = pd.read_csv(os.path.join(daily_path,row["ws"] + "_coords.csv"))
-                df_ws.at[index,"lat"],df_ws.at[index,"lon"],df_ws.at[index,"message"] = df_tmp.at[0,"lat"],df_tmp.at[0,"lon"],""
-            else:
-                errors += 1
-                df_ws.at[index,"message"] = "ERROR with coordinates"
-        if errors > 0:
-            print("WARNING: Stations with problems",df_ws.loc[df_ws["message"].isna() == False,:])
-        df_ws["ws"] = df_ws["ws"].astype('string')
-        df_ws["lat"] = df_ws["lat"].astype('float64')
-        df_ws["lon"] = df_ws["lon"].astype('float64')
-        df_ws["message"] = df_ws["message"].astype('string')
-        return df_ws
-
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to runs all process
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     def run(self):
-        ## up 2021, jre: Se estandariza el uso de formato fecha, se requiere paquete lubridate
-        print("Calculating dates for the process")
-        year_to = self.start_date.year
-        month_to = self.start_date.month
-        print("Init:",self.start_date,"End:",self.end_date,"Year:",year_to,"Month:",month_to)
+        # Prepare enviroment
+        print("Preparing enviroment")
+        self.prepare_env()
+        print("Env prepared")
 
-        # Validating folder
-        print("Validating folders")
-        path_country = os.path.join(self.path,self.country)
-        path_inputs = os.path.join(path_country,"inputs")
-        path_outputs = os.path.join(path_country,"outputs")
-        path_daily = os.path.join(path_inputs,"prediccionClimatica","dailyData")
-        path_daily_data = os.path.join(path_inputs,"prediccionClimatica","dailyData") # It is not included because we will create after
-        path_daily_downloaded = os.path.join(path_inputs,"prediccionClimatica","daily_downloaded") # It is not included because we will create after
-        path_resampling = os.path.join(path_outputs,"prediccionClimatica","resampling")
+        # Final list of stations to be processed
+        print("Listing stations")
+        df_ws = self.list_ws()
+        print("Listed stations")
 
-        folders = [path_country,path_inputs,path_outputs,path_daily,path_resampling]
-        missing_files = []
+        # Download Chirps data
+        print("CHIRPS data started!")
+        self.download_data_chirp()
+        print("CHIRPS data downloaded!")
 
-        for folder in folders:
-            if not os.path.exists(folder):
-                missing_files.append(folder)
+        # Download ERA 5 data
+        print("ERA 5 data started!")
+        self.download_era5_data()
+        print("ERA 5 data downloaded!")
 
-        if len(missing_files) > 0:
-            print("ERROR Directories don't exist",missing_files)
-        else:
-            self.manager.mkdir(path_daily_downloaded)
+        print("Extracting CHIRP data")
+        df_data_chirp = self.extract_chirp_data(df_ws)
+        print("Extracted CHIRP data")
 
-            # Download Chirps data
-            print("CHIRPS data started!")
-            self.download_data_chirp(path_daily_downloaded, year_to)
-            print("CHIRPS data downloaded!")
+        print("Extracting ERA 5 data")
+        df_data_era5 = self.extract_era5_data(df_ws)
+        print("Extracted ERA 5 data")
 
-            # Download ERA 5 data
-            print("ERA 5 data started!")
-            self.download_era5_data(path_daily_downloaded)
-            print("ERA 5 data downloaded!")
+        print("Merging CHIRPS and ERA 5")
+        df_data = pd.DataFrame()
+        df_data = pd.merge(df_data_chirp,df_data_era5,how='outer',on=['ws','day','month','year'])
+        print("Merged CHIRPS and ERA 5")
 
-            # Final list of stations to be processed
-            print("Listing stations")
-            df_ws = self.list_ws(path_resampling,path_daily_data)
-            print("Listed stations")
+        print("Extracting Climatology data")
+        df_data_climatology = self.extract_climatology(df_ws)
+        print("Extracted Climatology data")
 
-            print("Extracting CHIRP data")
-            df_data_chirp = self.extract_chirp_data(path_daily_downloaded,df_ws)
-            print("Extracted CHIRP data")
-
-            print("Extracting ERA 5 data")
-            df_data_era5 = self.extract_era5_data(path_daily_downloaded,df_ws)
-            print("Extracted ERA 5 data")
-
-            print("Merging CHIRPS and ERA 5")
-            df_data = pd.DataFrame()
-            df_data = pd.merge(df_data_chirp,df_data_era5,how='outer',on=['ws','day','month','year'])
-            print("Merged CHIRPS and ERA 5")
-
-            ########### Code to validate
-
-            print("Extracting Climatology data")
-            df_data_climatology = self.extract_climatology(path_daily_data,df_ws)
-            print("Extracted Climatology data")
-
-            print("Writing scenarios")
-            self.write_outputs(path_resampling,df_ws,df_data,df_data_climatology)
-            print("Finished")
+        print("Writing scenarios")
+        self.write_outputs(df_ws,df_data,df_data_climatology)
+        print("Finished")
