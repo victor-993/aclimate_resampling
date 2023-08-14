@@ -14,17 +14,17 @@ warnings.filterwarnings("ignore")
 
 class AClimateResampling():
 
-  def __init__(self,path,country,cores, year_forecast):
+  def __init__(self,path,country, year_forecast):
      self.path = path
      self.country = country
-     self.cores = cores
+     #self.cores = cores
      self.path_inputs = os.path.join(self.path,self.country,"inputs")
      self.path_inputs_prediccion = os.path.join(self.path_inputs,"prediccionClimatica")
      self.path_inputs_daily = os.path.join(self.path_inputs_prediccion,"dailyData")
      self.path_outputs = os.path.join(self.path,self.country,"outputs")
      self.path_outputs_prob = os.path.join(self.path_outputs,"probForecast")
      self.year_forecast = year_forecast
-     self.npartitions = int(round(cores/3)) 
+     self.npartitions = 10 #int(round(cores/3)) 
 
      pass
 
