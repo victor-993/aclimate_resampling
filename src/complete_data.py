@@ -58,15 +58,15 @@ class CompleteData():
         self.path_country_outputs = os.path.join(self.path_country,"outputs")
         self.path_country_outputs_resampling = os.path.join(self.path_country_outputs,"resampling")
 
-        print("Validating folders needed")
+        print("Validating folders needed for",self.country,"in",self.path)
         folders = [self.path_country,self.path_country_inputs,self.path_country_inputs_forecast,
                    self.path_country_inputs_forecast_dailydata,self.path_country_outputs,self.path_country_outputs_resampling]
         missing_files = ""
         missing_count = 0
 
-        for folder in folders:
+        for idx, folder in enumerate(folders):
             if not os.path.exists(folder):
-                missing_files = missing_files + ","
+                missing_files = str(idx) + "-" + folder + ","
                 missing_count += 1
 
         if missing_count > 0:
@@ -125,6 +125,7 @@ class CompleteData():
     # OUTPUT: save rasters layers.
     def download_data_chirp(self):
         save_path = self.path_country_inputs_forecast_dailydownloaded
+        print(save_path)
         # Create folder for data
         save_path_chirp = os.path.join(save_path,"chirp")
         self.manager.mkdir(save_path_chirp)
