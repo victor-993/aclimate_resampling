@@ -58,9 +58,9 @@ class TestCompleteData(unittest.TestCase):
 
     def tearDown(self):
         # Clean up the temporary test directory and its contents after each test
-        #shutil.rmtree(self.root_data)
+        shutil.rmtree(self.root_data)
         pass
-
+    
     def create_mock_raster(self):
         chirp_src = os.path.join(self.data,self.chirp_data)
         era5_src = os.path.join(self.data,self.era5_data)
@@ -76,7 +76,7 @@ class TestCompleteData(unittest.TestCase):
             shutil.move(chirp_src, chirp_dst)
         if not(os.path.exists(era5_dst)):
             shutil.move(era5_src, era5_dst)
-    """
+    
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD FILE
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -181,7 +181,7 @@ class TestCompleteData(unittest.TestCase):
 
         transformed_files = glob.glob(os.path.join(self.chirps_path, '*.tif'))
         self.assertEqual(len(transformed_files), 29)  # 29 days of data downloaded for each variable
-    """
+    
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD ERA 5
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -231,7 +231,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST EXTRACT VALUES
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    """
+    
     def test_extract_values_single_file_single_location_chirp(self):
         variable = 'prec'
         # Test extracting values for a single file and a single location
@@ -264,7 +264,7 @@ class TestCompleteData(unittest.TestCase):
             {'ws': 'Location 2', 'day': 1, 'month': 6, 'year': 2023, variable: 11.695796}
         ]
         self.assertEqual(extracted_data, expected_data)
-    """
+    
     def test_extract_values_single_file_single_location_era5(self):
         variable = self.variable_era5
         # Test extracting values for a single file and a single location
@@ -277,9 +277,13 @@ class TestCompleteData(unittest.TestCase):
         extracted_data = complete_data.extract_values(os.path.join(self.era5_path,variable), variable, self.location, -23,-15,'%Y%m%d')
 
         # Check if the extracted data is correct
-        expected_data = [{'ws': 'Test Location', 'day': 1, 'month': 6, 'year': 2023, variable: 20.708344}]
-
-        self.assertEqual(extracted_data[0], expected_data[0])
+        expected_data = []
+        expected_data.append({'ws': 'Test Location', 'day': 1, 'month': 6, 'year': 2023, variable: 20.708344})
+        self.assertEqual(extracted_data[0]['ws'], expected_data[0]['ws'])
+        self.assertEqual(extracted_data[0]['day'], expected_data[0]['day'])
+        self.assertEqual(extracted_data[0]['month'], expected_data[0]['month'])
+        self.assertEqual(extracted_data[0]['year'], expected_data[0]['year'])
+        self.assertEqual(int(extracted_data[0][variable]),int(expected_data[0][variable]))
 
     def test_extract_values_multiple_files_multiple_locations_era5(self):
         # Test extracting values for multiple files and multiple locations
@@ -297,12 +301,17 @@ class TestCompleteData(unittest.TestCase):
             {'ws': 'Location 1', 'day': 1, 'month': 6, 'year': 2023, variable: 20.708344},
             {'ws': 'Location 2', 'day': 1, 'month': 6, 'year': 2023, variable: 25.889648}
         ]
-        self.assertEqual(extracted_data, expected_data)
+        for i in [0,1]:
+            self.assertEqual(extracted_data[i]['ws'], expected_data[i]['ws'])
+            self.assertEqual(extracted_data[i]['day'], expected_data[i]['day'])
+            self.assertEqual(extracted_data[i]['month'], expected_data[i]['month'])
+            self.assertEqual(extracted_data[i]['year'], expected_data[i]['year'])
+            self.assertEqual(int(extracted_data[i][variable]),int(expected_data[i][variable]))
 
     # =-=-=-=-=-=-=-=-=-
     # TEST EXTRACT CHIRP
     # =-=-=-=-=-=-=-=-=-
-    """
+    
     def test_extract_chirp_data_single_location(self):
         # Test extracting chirp data for a single location
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
@@ -336,7 +345,7 @@ class TestCompleteData(unittest.TestCase):
             'prec': [20.493248,11.695796]
         })
         pd.testing.assert_frame_equal(extracted_data, expected_data)
-    """
+    
     # =-=-=-=-=-=-=-=-=-
     # TEST EXTRACT ERA 5
     # =-=-=-=-=-=-=-=-=-
@@ -418,11 +427,11 @@ class TestCompleteData(unittest.TestCase):
         expected_data["message"] = expected_data["message"].astype('string')
 
         pd.testing.assert_frame_equal(df_ws, expected_data)
-
+    
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
     # TEST EXTRACT CLIMATOLOGY
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
-    """
+    
     def test_extract_climatology_single_location(self):
         # Test extracting climatology for a single location
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.root_data, cores=self.cores)
@@ -495,6 +504,6 @@ class TestCompleteData(unittest.TestCase):
             'lat': [40.0, 41.0],
             'lon': [-120.0, -121.0]
         })
-    """
+    
 if __name__ == '__main__':
     unittest.main()

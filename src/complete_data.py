@@ -205,6 +205,7 @@ class CompleteData():
                                 'month':date.month,
                                 'year': date.year,
                                 var: value})
+        #print(data)
         return data
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
