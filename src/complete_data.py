@@ -358,6 +358,10 @@ class CompleteData():
                 df_data = df_data[cols_total]
                 df_data.to_csv(f,index=False)
 
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # Function to execute chunk of the waether station list
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # df_chunk: Dataframe with the partial list of weather stations
     def run_chunk(self, df_chunk):
         print("Extracting CHIRP data")
         df_data_chirp = self.extract_chirp_data(df_chunk)
@@ -379,6 +383,8 @@ class CompleteData():
         print("Writing scenarios")
         self.write_outputs(df_chunk,df_data,df_data_climatology)
         print("Finished")
+
+        return True
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to runs all process
