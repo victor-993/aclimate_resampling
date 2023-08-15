@@ -292,7 +292,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Copy the two raster for testing
-        self.create_mock_raster()
+        complete_data.download_data_chirp(test=True)
 
         # Perform the extraction
         extracted_data = complete_data.extract_values(self.path_env_country_inputs_forecast_dailydownloaded_chirp, variable, self.location, -14,-4,'%Y.%m.%d')
@@ -314,7 +314,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Copy the two raster for testing
-        self.create_mock_raster()
+        complete_data.download_data_chirp(test=True)
 
         # Perform the extraction
         extracted_data = complete_data.extract_values(self.path_env_country_inputs_forecast_dailydownloaded_chirp, variable, self.locations, -14,-4,'%Y.%m.%d')
@@ -339,7 +339,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Copy the two raster for testing
-        self.create_mock_raster()
+        complete_data.download_era5_data(variables=[variable],test=True)
 
         # Perform the extraction
         extracted_data = complete_data.extract_values(os.path.join(self.path_env_country_inputs_forecast_dailydownloaded_era5,variable), variable, self.location, -23,-15,'%Y%m%d')
@@ -361,7 +361,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Copy the two raster for testing
-        self.create_mock_raster()
+        complete_data.download_era5_data(variables=[variable],test=True)
 
         # Perform the extraction
         extracted_data = complete_data.extract_values(os.path.join(self.path_env_country_inputs_forecast_dailydownloaded_era5,variable), variable, self.locations, -23,-15,'%Y%m%d')
@@ -389,6 +389,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Perform the extraction
+        complete_data.download_data_chirp(test=True)
         extracted_data = complete_data.extract_chirp_data(self.location)
 
         # Check if the extracted data is correct
@@ -408,6 +409,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Perform the extraction
+        complete_data.download_data_chirp(test=True)
         extracted_data = complete_data.extract_chirp_data(self.locations)
 
         # Check if the extracted data is correct
@@ -431,6 +433,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Perform the extraction for t_max variable
+        complete_data.download_era5_data(variables=[self.variable_era5],test=True)
         extracted_data = complete_data.extract_era5_data(self.locations, variables=[self.variable_era5])
         extracted_data = extracted_data.loc[extracted_data["day"] == 1,:]
         
@@ -476,6 +479,9 @@ class TestCompleteData(unittest.TestCase):
         expected_data["ws"] = expected_data["ws"].astype('string')
         expected_data["message"] = expected_data["message"].astype('string')
 
+        df_ws = df_ws.sort_values(by=['ws'], ascending=True)
+        expected_data = expected_data.sort_values(by=['ws'], ascending=True)
+
         pd.testing.assert_frame_equal(df_ws, expected_data)
 
     def test_list_ws_stations_without_coords(self):
@@ -507,6 +513,9 @@ class TestCompleteData(unittest.TestCase):
         })
         expected_data["ws"] = expected_data["ws"].astype('string')
         expected_data["message"] = expected_data["message"].astype('string')
+
+        df_ws = df_ws.sort_values(by=['ws'], ascending=True)
+        expected_data = expected_data.sort_values(by=['ws'], ascending=True)
 
         pd.testing.assert_frame_equal(df_ws, expected_data)
     
