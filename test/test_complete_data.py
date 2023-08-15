@@ -402,6 +402,8 @@ class TestCompleteData(unittest.TestCase):
             'year': [2023],
             'prec': [20.493248]
         })
+        expected_data['prec'] = expected_data['prec'].astype('float32')
+        expected_data = expected_data.loc[expected_data['day'] == 1,:]
         pd.testing.assert_frame_equal(extracted_data, expected_data)
 
     def test_extract_chirp_data_multiple_locations(self):
@@ -422,6 +424,8 @@ class TestCompleteData(unittest.TestCase):
             'year': [2023,2023],
             'prec': [20.493248,11.695796]
         })
+        expected_data['prec'] = expected_data['prec'].astype('float32')
+        expected_data = expected_data.loc[expected_data['day'] == 1,:]
         pd.testing.assert_frame_equal(extracted_data, expected_data)
     
     # =-=-=-=-=-=-=-=-=-
