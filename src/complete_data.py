@@ -93,10 +93,7 @@ class CompleteData():
                 df_ws.at[index,"message"] = "ERROR with coordinates"
         if errors > 0:
             print("WARNING: Stations with problems",df_ws.loc[df_ws["message"].isna() == False,:])
-        df_ws["ws"] = df_ws["ws"].astype('string')
-        df_ws["lat"] = df_ws["lat"].astype('float64')
-        df_ws["lon"] = df_ws["lon"].astype('float64')
-        df_ws["message"] = df_ws["message"].astype('string')
+
         return df_ws
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
