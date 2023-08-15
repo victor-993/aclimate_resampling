@@ -81,6 +81,40 @@ class TestCompleteData(unittest.TestCase):
             shutil.copytree(self.path_data_inputs_forecast_dailydata,self.path_env_country_inputs_forecast_dailydata, ignore=shutil.ignore_patterns('*'))
         if not os.listdir(self.path_env_country_outputs_resampling):
             shutil.copytree(self.path_data_outputs,self.path_env_country_outputs, ignore=shutil.ignore_patterns('*'))
+    
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # TEST PREPARE ENV
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+    def test_valid_path_creation(self):
+        self.move_tests_files()
+        complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
+        complete_data.prepare_env()
+
+        self.assertTrue(os.path.exists(complete_data.path_country))
+        self.assertTrue(os.path.exists(complete_data.path_country_inputs))
+        self.assertTrue(os.path.exists(complete_data.path_country_inputs_forecast))
+        self.assertTrue(os.path.exists(complete_data.path_country_inputs_forecast_dailydata))
+        self.assertTrue(os.path.exists(complete_data.path_country_inputs_forecast_dailydownloaded))
+        self.assertTrue(os.path.exists(complete_data.path_country_outputs))
+        self.assertTrue(os.path.exists(complete_data.path_country_outputs_resampling))
+
+    def test_missing_folders(self):
+        complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
+        # Simulate missing folders by not calling prepare_env()
+
+        with self.assertRaises(ValueError) as context:
+            complete_data.prepare_env()
+
+        self.assertTrue("ERROR Directories don't exist" in str(context.exception))
+
+    def test_daily_downloaded_folder_creation(self):
+        self.move_tests_files()
+        complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
+        complete_data.prepare_env()
+
+        self.assertTrue(os.path.exists(complete_data.path_country_inputs_forecast_dailydownloaded))
+
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD FILE
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
