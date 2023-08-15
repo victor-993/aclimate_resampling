@@ -33,6 +33,17 @@ jobs:
     - name: Active environment
       run: |
         source env/bin/activate
+    - name: Install GDAL dependencies
+      run: |
+        sudo add-apt-repository -y ppa:ubuntugis/ppa
+        sudo apt-get update -q
+        sudo apt-get install -y libgdal-dev
+    - name: Install GDAL Python package
+      run: |
+        pip install GDAL==3.2.1
+    - name: Check GDAL version
+      run: |
+        python -c "from osgeo import gdal; print(gdal.__version__)"
     - name: Install dependencies
       run: |
         pip install -r ./requirements.txt
