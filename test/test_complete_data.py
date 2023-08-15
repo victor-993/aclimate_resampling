@@ -11,6 +11,7 @@ from datetime import datetime
 from datetime import timedelta
 from src.complete_data import CompleteData
 import pandas as pd
+import numpy as np
 
 class TestCompleteData(unittest.TestCase):
 
@@ -57,6 +58,7 @@ class TestCompleteData(unittest.TestCase):
     def tearDown(self):
         # Clean up the temporary test directory and its contents after each test
         shutil.rmtree(self.path_env)
+        pass
     
     def create_mock_raster(self):
         chirp_src = os.path.join(self.path_data,self.chirp_data)
@@ -75,16 +77,16 @@ class TestCompleteData(unittest.TestCase):
             shutil.move(era5_src, era5_dst)
     
     def move_tests_files(self):
-        os.makedirs(self.path_env_country_inputs_forecast,exist_ok=True)
+        os.makedirs(self.path_env_country_inputs,exist_ok=True)
         if not os.path.exists(self.path_env_country_inputs_forecast_dailydata):
-            shutil.copytree(self.path_data_inputs_forecast,self.path_env_country_inputs_forecast_dailydata)
+            shutil.copytree(self.path_data_inputs_forecast,self.path_env_country_inputs_forecast)
         if not os.path.exists(self.path_env_country_outputs):
             shutil.copytree(self.path_data_outputs,self.path_env_country_outputs)
     
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST PREPARE ENV
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
+    
     def test_prepare_env_valid_path_creation(self):
         self.move_tests_files()
         complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
@@ -173,7 +175,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD DATA CHIRP
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
+    
     def test_download_data_chirp(self):
         self.move_tests_files()
         # Test downloading chirp data for a specific period
@@ -452,7 +454,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
     # TEST LIST WEATHER STATION
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
-
+    
     def test_list_ws_stations(self):
         self.move_tests_files()
 
@@ -493,23 +495,23 @@ class TestCompleteData(unittest.TestCase):
 
         # Remove one coords file for one station
         if os.path.exists(os.path.join(self.path_env_country_inputs_forecast_dailydata,"5ebad0a74c06b707e80d5c4a_coords.csv")):
-            shutil.rmtree(os.path.join(self.path_env_country_inputs_forecast_dailydata,"5ebad0a74c06b707e80d5c4a_coords.csv"))
+            os.remove(os.path.join(self.path_env_country_inputs_forecast_dailydata,"5ebad0a74c06b707e80d5c4a_coords.csv"))
 
         # Perform listing of stations
         df_ws = complete_data.list_ws()
 
         # Create a mock coordinates file for a single station
         ws_names = ['5e91e1c214daf81260ebba59', '5eb346bdebd0050e38685f3e', '5ebad0a74c06b707e80d5c4a']
-        lats = [12.79, 12.13649, 10.057273]
-        lons = [39.65, 39.66048, 34.54025]
-        messages = ['', '', 'ERROR with coordinates']
+        lats = [12.79, 12.13649, np.nan]
+        lons = [39.65, 39.66048, np.nan]
+        msgs = ['', '', 'ERROR with coordinates']
 
         # Check if the station information is correctly listed
         expected_data = pd.DataFrame({
-            'ws': [ws_names],
-            'lat': [lats],
-            'lon': [lons],
-            'message': [messages]
+            'ws': ws_names,
+            'lat': lats,
+            'lon': lons,
+            'message': msgs
         })
         expected_data["ws"] = expected_data["ws"].astype('string')
         expected_data["message"] = expected_data["message"].astype('string')
