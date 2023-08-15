@@ -14,9 +14,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 from tqdm import tqdm
-
+import numpy as np
 import rasterio
 import xarray
+import multiprocessing as mp
 
 import cdsapi # https://cds.climate.copernicus.eu/cdsapp#!/dataset/sis-agrometeorological-indicators?tab=form
 
@@ -357,6 +358,28 @@ class CompleteData():
                 df_data = df_data[cols_total]
                 df_data.to_csv(f,index=False)
 
+    def run_chunk(self, df_chunk):
+        print("Extracting CHIRP data")
+        df_data_chirp = self.extract_chirp_data(df_chunk)
+        print("Extracted CHIRP data")
+
+        print("Extracting ERA 5 data")
+        df_data_era5 = self.extract_era5_data(df_chunk)
+        print("Extracted ERA 5 data")
+
+        print("Merging CHIRPS and ERA 5")
+        df_data = pd.DataFrame()
+        df_data = pd.merge(df_data_chirp,df_data_era5,how='outer',on=['ws','day','month','year'])
+        print("Merged CHIRPS and ERA 5")
+
+        print("Extracting Climatology data")
+        df_data_climatology = self.extract_climatology(df_chunk)
+        print("Extracted Climatology data")
+
+        print("Writing scenarios")
+        self.write_outputs(df_chunk,df_data,df_data_climatology)
+        print("Finished")
+
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # Function to runs all process
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -364,10 +387,6 @@ class CompleteData():
         print("Preparing enviroment")
         self.prepare_env()
         print("Env prepared")
-
-        print("Listing stations")
-        df_ws = self.list_ws()
-        print("Listed stations")
 
         print("CHIRPS data started!")
         self.download_data_chirp()
@@ -377,23 +396,14 @@ class CompleteData():
         self.download_era5_data()
         print("ERA 5 data downloaded!")
 
-        print("Extracting CHIRP data")
-        df_data_chirp = self.extract_chirp_data(df_ws)
-        print("Extracted CHIRP data")
+        print("Listing stations")
+        df_ws = self.list_ws()
+        print("Listed stations")
 
-        print("Extracting ERA 5 data")
-        df_data_era5 = self.extract_era5_data(df_ws)
-        print("Extracted ERA 5 data")
+        print("Adding data started!")
+        pool = mp.Pool(processes=self.cores)
+        chunks = np.array_split(df_ws, self.cores)
+        chunk_processes = [pool.apply_async(self.run_chunk, args=(chunk)) for chunk in chunks]
+        print("Added data!")
 
-        print("Merging CHIRPS and ERA 5")
-        df_data = pd.DataFrame()
-        df_data = pd.merge(df_data_chirp,df_data_era5,how='outer',on=['ws','day','month','year'])
-        print("Merged CHIRPS and ERA 5")
-
-        print("Extracting Climatology data")
-        df_data_climatology = self.extract_climatology(df_ws)
-        print("Extracted Climatology data")
-
-        print("Writing scenarios")
-        self.write_outputs(df_ws,df_data,df_data_climatology)
-        print("Finished")
+        print("Process finished")
