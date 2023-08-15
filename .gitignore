@@ -163,10 +163,18 @@ cython_debug/
 src/unittests.py
 
 # Folder to test
-data/*/
-data/*.*
-!data/readme.md
+#data/*/
+#data/*.*
+#!data/readme.md
 
 # Credenciales
 /cdsapirc
 /.cdsapirc
+
+test/test_files
+
+data/chirp.2023.06.01.tif
+data/Temperature-Air-2m-Max-24h_C3S-glob-agric_AgERA5_20230601_final-v1.0.tif
+
+chirp
+chirps
