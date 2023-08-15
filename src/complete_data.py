@@ -253,7 +253,7 @@ class CompleteData():
     # date_format: Format in which we can find the date in the filename
     # OUTPUT: list with values extracted by variable, date, and station.
     def extract_values(self,dir_path,var,locations, date_start,date_end,date_format):
-        files = [f for f in os.listdir(dir_path) if f.endswith('.tif')]
+        files = [f for f in sorted(os.listdir(dir_path)) if f.endswith('.tif')]
         data = []
 
         # Loop for each daily file
