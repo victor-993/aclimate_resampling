@@ -35,6 +35,11 @@ class TestCompleteData(unittest.TestCase):
         #self.root_data = os.path.abspath(os.path.join(os.path.dirname(__file__), 'test_files'))
 
         self.path_data = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+        self.path_data_inputs = os.path.join(self.path_data, 'inputs')
+        self.path_data_inputs_forecast = os.path.join(self.path_data_inputs, 'prediccionClimatica')
+        self.path_data_inputs_forecast_dailydata = os.path.join(self.path_data_inputs_forecast, 'dailyData')
+        self.path_data_outputs = os.path.join(self.path_data, 'outputs')
+        self.path_data_outputs_resampling = os.path.join(self.path_data_outputs, 'resampling')
 
         self.path_env = os.path.abspath(os.path.join(os.path.dirname(__file__), 'test_files'))
         self.path_env_country = os.path.join(self.path_env,self.country)
@@ -44,6 +49,8 @@ class TestCompleteData(unittest.TestCase):
         self.path_env_country_inputs_forecast_dailydownloaded = os.path.join(self.path_env_country_inputs_forecast,"daily_downloaded")
         self.path_env_country_inputs_forecast_dailydownloaded_chirp = os.path.join(self.path_env_country_inputs_forecast_dailydownloaded,"chirp")
         self.path_env_country_inputs_forecast_dailydownloaded_era5 = os.path.join(self.path_env_country_inputs_forecast_dailydownloaded,"era5")
+        self.path_env_country_outputs = os.path.join(self.path_env_country,"outputs")
+        self.path_env_country_outputs_resampling = os.path.join(self.path_env_country_outputs,"resampling")
 
         self.chirps_file_path = os.path.join(self.path_env_country, self.chirps_file_name)
         self.chirps_file_path_compressed = os.path.join(self.path_env_country, self.chirps_url_name)
@@ -97,6 +104,12 @@ class TestCompleteData(unittest.TestCase):
         if not(os.path.exists(era5_dst)):
             shutil.move(era5_src, era5_dst)
     
+    def move_tests_files(self):
+        if not os.listdir(self.path_env_country_inputs_forecast_dailydata):
+            os.makedirs(self.path_env_country_inputs_forecast,exist_ok=True)
+            shutil.copytree(self.path_data_inputs_forecast_dailydata,self.path_env_country_inputs_forecast_dailydata, ignore=shutil.ignore_patterns('*'))
+        if not os.listdir(self.path_env_country_outputs_resampling):
+            shutil.copytree(self.path_data_outputs,self.path_env_country_outputs, ignore=shutil.ignore_patterns('*'))
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST DOWNLOAD FILE
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -418,6 +431,8 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-
 
     def test_list_ws_stations(self):
+        self.move_tests_files()
+
         # Test listing stations with a single valid station
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -444,6 +459,8 @@ class TestCompleteData(unittest.TestCase):
         pd.testing.assert_frame_equal(df_ws, expected_data)
 
     def test_list_ws_stations_without_coords(self):
+        self.move_tests_files()
+        
         # Test listing stations with a single valid station
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
