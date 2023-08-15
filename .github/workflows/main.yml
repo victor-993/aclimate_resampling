@@ -43,9 +43,6 @@ jobs:
         pip install -r ./requirements.txt
     - name: Install GDAL Python package
       run: |
-        pip install --no-install GDAL
-        cd /path/to/gdalenv/build/GDAL
-        python setup.py build_ext --include-dirs=/usr/include/gdal/
         pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
     - name: Check GDAL version
       run: |
