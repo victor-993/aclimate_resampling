@@ -50,6 +50,7 @@ jobs:
     - name: Run Tests
       run: |
         pwd
+        ls
         python -m unittest discover -s ./tests/ 
 
 
