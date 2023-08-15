@@ -49,6 +49,7 @@ jobs:
         python -c "from osgeo import gdal; print(gdal.__version__)"
     - name: Run Tests
       run: |
+        pwd
         python -m unittest discover -s ./tests/ 
 
 
