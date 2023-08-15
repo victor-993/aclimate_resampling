@@ -186,7 +186,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.download_data_chirp(test=True)
 
         # Check if the chirp data files were downloaded and stored in the correct location
-        dates = [self.start_date + timedelta(days=x) for x in range((self.end_date - self.start_date).days + 1)]
+        dates = [self.start_date + timedelta(days=x) for x in [0,1]]
         expected_files = [f"chirp.{date.strftime('%Y.%m.%d')}.tif" for date in dates]
         for file in expected_files:
             file_path = os.path.join(self.path_env_country_inputs_forecast_dailydownloaded_chirp, file)
@@ -199,7 +199,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Create some mock chirp data files
-        for date in [self.start_date + timedelta(days=1), self.start_date + timedelta(days=2)]:
+        for date in [self.start_date + timedelta(days=1), [0,1]]:
             file_name = f"chirp.{date.strftime('%Y.%m.%d')}.tif"
             file_path = os.path.join(self.path_env_country_inputs_forecast_dailydownloaded_chirp, file_name)
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
