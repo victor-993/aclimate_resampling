@@ -1,7 +1,7 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Devops SPCAT_SCRIPTS
+name: Devops AClimate Resampling
 
 on:
   push:
@@ -27,18 +27,31 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.9"
+    - name: Install GDAL dependencies
+      run: |
+        sudo add-apt-repository -y ppa:ubuntugis/ppa
+        sudo apt-get update -q
+        sudo apt-get install -y libgdal-dev
     - name: Create environment
       run: |
         python -m venv env
     - name: Active environment
       run: |
         source env/bin/activate
-    - name: Install dependencies
+    - name: Install dependencies part 1
       run: |
         pip install -r ./requirements.txt
+    - name: Install GDAL Python package
+      run: |
+        pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
+    - name: Check GDAL version
+      run: |
+        python -c "from osgeo import gdal; print(gdal.__version__)"
     - name: Run Tests
       run: |
-        python -m unittest discover -s ./tests/ 
+        pwd
+        ls
+        python -m unittest discover -s ./test/ 
 
 
 # ------- END Scripts PROCCESS -------- #    
