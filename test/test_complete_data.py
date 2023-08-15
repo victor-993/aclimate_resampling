@@ -57,7 +57,6 @@ class TestCompleteData(unittest.TestCase):
     def tearDown(self):
         # Clean up the temporary test directory and its contents after each test
         shutil.rmtree(self.path_env)
-        pass
     
     def create_mock_raster(self):
         chirp_src = os.path.join(self.path_data,self.chirp_data)
@@ -76,17 +75,17 @@ class TestCompleteData(unittest.TestCase):
             shutil.move(era5_src, era5_dst)
     
     def move_tests_files(self):
-        if not os.listdir(self.path_env_country_inputs_forecast_dailydata):
-            os.makedirs(self.path_env_country_inputs_forecast,exist_ok=True)
-            shutil.copytree(self.path_data_inputs_forecast_dailydata,self.path_env_country_inputs_forecast_dailydata, ignore=shutil.ignore_patterns('*'))
-        if not os.listdir(self.path_env_country_outputs_resampling):
-            shutil.copytree(self.path_data_outputs,self.path_env_country_outputs, ignore=shutil.ignore_patterns('*'))
+        os.makedirs(self.path_env_country_inputs_forecast,exist_ok=True)
+        if not os.path.exists(self.path_env_country_inputs_forecast_dailydata):
+            shutil.copytree(self.path_data_inputs_forecast,self.path_env_country_inputs_forecast_dailydata)
+        if not os.path.exists(self.path_env_country_outputs):
+            shutil.copytree(self.path_data_outputs,self.path_env_country_outputs)
     
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # TEST PREPARE ENV
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-    def test_valid_path_creation(self):
+    def test_prepare_env_valid_path_creation(self):
         self.move_tests_files()
         complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -99,7 +98,7 @@ class TestCompleteData(unittest.TestCase):
         self.assertTrue(os.path.exists(complete_data.path_country_outputs))
         self.assertTrue(os.path.exists(complete_data.path_country_outputs_resampling))
 
-    def test_missing_folders(self):
+    def test_prepare_env_missing_folders(self):
         complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
         # Simulate missing folders by not calling prepare_env()
 
@@ -108,7 +107,7 @@ class TestCompleteData(unittest.TestCase):
 
         self.assertTrue("ERROR Directories don't exist" in str(context.exception))
 
-    def test_daily_downloaded_folder_creation(self):
+    def test_prepare_env_daily_downloaded_folder_creation(self):
         self.move_tests_files()
         complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -120,6 +119,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     
     def test_download_file_force_false(self):
+        self.move_tests_files()
         # Test downloading a file with force=False (file already exists)
         complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -135,6 +135,7 @@ class TestCompleteData(unittest.TestCase):
         self.assertTrue(os.path.exists(self.chirps_file_path))
 
     def test_download_file_force_true(self):
+        self.move_tests_files()
         # Test downloading a file with force=True
         complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -153,6 +154,7 @@ class TestCompleteData(unittest.TestCase):
         self.assertTrue(os.path.exists(self.chirps_file_path))
 
     def test_download_file_path_not_exists(self):
+        self.move_tests_files()
         # Test downloading a file to a path that does not exist
         complete_data = CompleteData(self.start_date, self.country, self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -173,6 +175,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
     def test_download_data_chirp(self):
+        self.move_tests_files()
         # Test downloading chirp data for a specific period
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -188,6 +191,7 @@ class TestCompleteData(unittest.TestCase):
             self.assertTrue(os.path.exists(file_path))
     
     def test_download_data_chirp_existing_files(self):
+        self.move_tests_files()
         # Test downloading chirp data when some files already exist and force=False
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -213,6 +217,7 @@ class TestCompleteData(unittest.TestCase):
             self.assertEqual(os.path.getsize(file_path), 9)  # Size of the "Mock data"
 
     def test_download_data_chirp_leapyear(self):
+        self.move_tests_files()
         # Test downloading chirp data for a leap year
         complete_data = CompleteData(start_date=self.start_date_leapyear, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -229,6 +234,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
     def test_download_era5_data_single_variable(self):
+        self.move_tests_files()
         # Test downloading era5 data for a single variable
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -243,6 +249,7 @@ class TestCompleteData(unittest.TestCase):
         self.assertEqual(len(transformed_files), 30)  # 30 days of data downloaded
 
     def test_download_era5_data_multiple_variables(self):
+        self.move_tests_files()
         # Test downloading era5 data for multiple variables (t_max, t_min, sol_rad)
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -259,6 +266,7 @@ class TestCompleteData(unittest.TestCase):
             self.assertEqual(len(transformed_files), 30)  # 3 days of data downloaded for each variable
 
     def test_download_era5_data_single_variable_leapyear(self):
+        self.move_tests_files()
         # Test downloading era5 data for a single variable
         complete_data = CompleteData(start_date=self.start_date_leapyear, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -277,6 +285,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     
     def test_extract_values_single_location_chirp(self):
+        self.move_tests_files()
         variable = 'prec'
         # Test extracting values for a single file and a single location
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
@@ -298,6 +307,7 @@ class TestCompleteData(unittest.TestCase):
         self.assertEqual(int(extracted_data[0][variable]),int(expected_data[0][variable]))
 
     def test_extract_values_multiple_locations_chirp(self):
+        self.move_tests_files()
         # Test extracting values for multiple files and multiple locations
         variable = 'prec'
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
@@ -322,6 +332,7 @@ class TestCompleteData(unittest.TestCase):
             self.assertEqual(int(extracted_data[i][variable]),int(expected_data[i][variable]))
     
     def test_extract_values_single_file_single_location_era5(self):
+        self.move_tests_files()
         variable = self.variable_era5
         # Test extracting values for a single file and a single location
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
@@ -343,6 +354,7 @@ class TestCompleteData(unittest.TestCase):
         self.assertEqual(int(extracted_data[0][variable]),int(expected_data[0][variable]))
 
     def test_extract_values_multiple_files_multiple_locations_era5(self):
+        self.move_tests_files()
         # Test extracting values for multiple files and multiple locations
         variable = self.variable_era5
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
@@ -371,6 +383,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-
     
     def test_extract_chirp_data_single_location(self):
+        self.move_tests_files()
         # Test extracting chirp data for a single location
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -389,6 +402,7 @@ class TestCompleteData(unittest.TestCase):
         pd.testing.assert_frame_equal(extracted_data, expected_data)
 
     def test_extract_chirp_data_multiple_locations(self):
+        self.move_tests_files()
         # Test extracting chirp data for a single location
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
@@ -411,6 +425,7 @@ class TestCompleteData(unittest.TestCase):
     # =-=-=-=-=-=-=-=-=-
 
     def test_extract_era5_data_multiple_locations_single_variable(self):
+        self.move_tests_files()
         # Test extracting era5 data for multiple locations and a single variable
         complete_data = CompleteData(start_date=self.start_date, country=self.country, path=self.path_env, cores=self.cores)
         complete_data.prepare_env()
