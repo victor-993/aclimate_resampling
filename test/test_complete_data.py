@@ -181,7 +181,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Perform the download
-        complete_data.download_data_chirp()
+        complete_data.download_data_chirp(test=True)
 
         # Check if the chirp data files were downloaded and stored in the correct location
         dates = [self.start_date + timedelta(days=x) for x in range((self.end_date - self.start_date).days + 1)]
@@ -207,7 +207,7 @@ class TestCompleteData(unittest.TestCase):
                 f.write("Mock data")
 
         # Perform the download
-        complete_data.download_data_chirp()
+        complete_data.download_data_chirp(test=True)
 
         # Check if the existing files were not downloaded again
         for date in [self.start_date + timedelta(days=1), self.start_date + timedelta(days=2)]:
@@ -240,7 +240,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Perform the download for a single variable (t_max)
-        complete_data.download_era5_data(variables=[self.variable_era5])
+        complete_data.download_era5_data(variables=[self.variable_era5],test=True)
 
         # Check if the era5 data files were downloaded, extracted, and transformed
         variable_path = os.path.join(self.path_env_country_inputs_forecast_dailydownloaded_era5, self.variable_era5)
@@ -255,7 +255,7 @@ class TestCompleteData(unittest.TestCase):
         complete_data.prepare_env()
 
         # Perform the download for multiple variables
-        complete_data.download_era5_data(variables=self.variables_era5)
+        complete_data.download_era5_data(variables=self.variables_era5,test=True)
 
         # Check if the era5 data files were downloaded, extracted, and transformed for all variables
         
